@@ -1,0 +1,6 @@
+services:
+	permissionFactory:
+		class: App\UI\PermissionFactory
+		arguments: [tagged(PermisionTag)]
+
+	- @permissionFactory::create
