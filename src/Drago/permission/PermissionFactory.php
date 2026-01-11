@@ -1,6 +1,13 @@
 <?php
 
-namespace App\UI;
+/**
+ * Drago Extension
+ * Package built on Nette Framework
+ */
+
+declare(strict_types=1);
+
+namespace Drago\Permission;
 
 use LogicException;
 use Nette\Security\Permission;
