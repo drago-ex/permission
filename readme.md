@@ -1,5 +1,5 @@
 ## Drago Permission
-Lightweight ACL and role management
+Lightweight ACL and role management.
 
 The package provides a central ACL factory, modular permission registration per module,
 and automatic authorization checks in presenters.
