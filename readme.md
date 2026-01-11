@@ -68,7 +68,7 @@ Module provider:
 ```neon
 services:
 	signPermission:
-		class: App\UI\Backend\Sign\SignPermission
+		class: Drago\Permission\PermissionFactory
 		tags: [PermisionTag]
 ```
 
