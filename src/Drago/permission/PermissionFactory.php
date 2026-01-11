@@ -23,13 +23,14 @@ final class PermissionFactory
 	/** @var iterable<Provider> */
 	private iterable $initializers;
 
+
 	public function __construct(iterable $initializers)
 	{
 		foreach ($initializers as $initializer) {
 			if (!$initializer instanceof Provider) {
 				throw new LogicException(sprintf(
 					'%s must implement Provider',
-					get_class($initializer)
+					$initializer::class,
 				));
 			}
 		}
