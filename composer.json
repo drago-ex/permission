@@ -14,11 +14,7 @@
 		"nette/robot-loader": "^4.1",
 		"nette/security": "^3.1",
 		"nette/application": "^3.1",
-		"nette/di": "^3.1",
-		"latte/latte": "^3.0",
-		"drago-ex/database": "^2.0",
-		"drago-ex/application": "^1.0",
-	  	"drago-ex/form": "^1.0"
+		"nette/di": "^3.1"
 	},
 	"require-dev": {
 		"nette/tester": "^2.5",
