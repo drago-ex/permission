@@ -16,8 +16,8 @@
 		"nette/application": "^3.1",
 		"nette/di": "^3.1",
 		"latte/latte": "^3.0",
-	  	"drago-ex/database": "^2.0",
-	  	"drago-ex/application": "^1.0",
+		"drago-ex/database": "^2.0",
+		"drago-ex/application": "^1.0",
 	  	"drago-ex/form": "^1.0"
 	},
 	"require-dev": {
