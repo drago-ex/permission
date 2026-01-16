@@ -3,8 +3,8 @@
 -- ---------------
 CREATE TABLE roles (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    name VARCHAR(40) NOT NULL,
-    role VARCHAR(40) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255) NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_roles_name (name)
 )
