@@ -18,7 +18,7 @@ use Nette\Security\Permission;
  *
  * Applies default roles and runs all registered Provider initializers.
  */
-final class PermissionFactory
+class PermissionFactory
 {
 	/** @var iterable<Provider> */
 	private iterable $initializers;
