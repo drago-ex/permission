@@ -73,10 +73,23 @@ services:
 ```
 
 ## Presenter Authorization
-Authorization is handled by the Authorization trait.
+Authorization is handled by the `Authorization` trait.
 
 - runs automatically on presenter startup
 - checks ACL using presenter name and action or signal
+
+To activate authorization in a presenter, include the trait:
+
+```php
+use Drago\Permission\Authorization;
+
+class BasePresenter extends Nette\Application\UI\Presenter
+{
+	use Authorization;
+}
+```
+
+All presenters extending `BasePresenter` will then have automatic authorization checks applied.
 
 Unauthorized access:
 - not logged in → redirect to Sign:in
