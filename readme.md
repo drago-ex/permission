@@ -58,7 +58,7 @@ Permission factory:
 ```neon
 services:
 	permissionFactory:
-		class: App\UI\PermissionFactory
+		class: Drago\Permission\PermissionFactory
 		arguments: [tagged(PermisionTag)]
 
 	- @permissionFactory::create
