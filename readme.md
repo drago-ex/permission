@@ -76,7 +76,7 @@ For larger applications with many providers, you can use the `search` section to
 ```neon
 search:
 	permissions:
-		in: %appDir%/UI/Backend
+		in: %appDir%/UI
 		classes: [*Permission]
 		tags: [PermisionTag]
 ```
