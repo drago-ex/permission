@@ -45,7 +45,7 @@ class PermissionFactory
 	{
 		$acl = new Permission;
 		$acl->addRole(Role::RoleGuest);
-		$acl->addRole(Role::RoleMember, Role::RoleGuest);
+		$acl->addRole(Role::RoleUser, Role::RoleGuest);
 		$acl->addRole(Role::RoleAdmin, Role::RoleMember);
 
 		foreach ($this->initializers as $initializer) {
