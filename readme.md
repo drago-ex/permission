@@ -72,6 +72,15 @@ services:
 		tags: [PermisionTag]
 ```
 
+For larger applications with many providers, you can use the `search` section to register all matching classes automatically instead of listing each one individually:
+```neon
+search:
+	permissions:
+		in: %appDir%/UI/Backend
+		classes: [*Permission]
+		tags: [PermisionTag]
+```
+
 ## Presenter Authorization
 Authorization is handled by the `Authorization` trait.
 
