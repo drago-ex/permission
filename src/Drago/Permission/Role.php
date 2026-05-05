@@ -17,6 +17,6 @@ class Role
 {
 	public const string
 		RoleGuest = 'guest',
-		RoleMember = 'member',
+		RoleUser = 'user',
 		RoleAdmin = 'admin';
 }
