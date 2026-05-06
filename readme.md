@@ -21,7 +21,7 @@ composer require drago-ex/permission
 ## Features
 - Central ACL creation
 - Modular permission providers per module
-- Default roles: guest, member, admin
+- Default roles: guest, user, admin
 - Automatic presenter authorization
 - Action and signal based privileges
 
@@ -29,8 +29,8 @@ composer require drago-ex/permission
 Default roles:
 
 - guest
-- member (inherits from guest)
-- admin (inherits from member)
+- user (inherits from guest)
+- admin (inherits from user)
 
 Roles are registered automatically.
 
@@ -85,7 +85,7 @@ search:
 Authorization is handled by the `Authorization` trait.
 
 - runs automatically on presenter startup
-- checks ACL using presenter name and action or signal
+- checks ACL using presenter name and resolved privilege
 
 To activate authorization in a presenter, include the trait:
 
@@ -103,3 +103,62 @@ All presenters extending `BasePresenter` will then have automatic authorization 
 Unauthorized access:
 - not logged in → redirect to Sign:in
 - logged in but forbidden → HTTP 403
+
+### Privilege resolution
+
+The trait automatically resolves which ACL privilege to check based on the current request:
+
+| Situation                        | Resolved privilege  |
+|----------------------------------|---------------------|
+| Page load (no signal)            | `{action}-read`     |
+| Signal from a read-only receiver | `{component}-read`  |
+| Signal listed as read-only       | `{component}-read`  |
+| Any other signal                 | `{component}-write` |
+
+### Read-only signals
+
+Override `readOnlySignals()` to declare signal names that should be treated as read operations (e.g. sorting, pagination):
+
+```php
+protected function readOnlySignals(): array
+{
+	return ['sort', 'page', 'itemsPerPage'];
+}
+```
+
+### Read-only receivers
+
+Override `readOnlyReceivers()` to declare component name substrings whose signals should always resolve to read privilege (e.g. a data grid that only displays data):
+
+```php
+protected function readOnlyReceivers(): array
+{
+	return ['articleGrid', 'userGrid'];
+}
+```
+
+Any signal whose receiver name contains one of these strings will be resolved as `{component}-read` regardless of the signal name.
+
+### Full example
+
+```php
+use Drago\Permission\Authorization;
+
+class ArticlePresenter extends BasePresenter
+{
+	protected function readOnlySignals(): array
+	{
+		// these signals only read data → checked as "{component}-read"
+		return ['sort', 'page'];
+	}
+
+	protected function readOnlyReceivers(): array
+	{
+		// any signal from a receiver containing "Grid" → checked as "{component}-read"
+		return ['Grid'];
+	}
+}
+```
+
+With this configuration the ACL check for `articleGrid:sort` resolves to `articleGrid-read`,
+while `articleGrid:delete` resolves to `articleGrid-write`.
