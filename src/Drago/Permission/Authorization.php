@@ -16,6 +16,25 @@ use Nette\Security\User;
 trait Authorization
 {
 	/**
+	 * Override in presenter to define which signal names resolve to read privilege.
+	 */
+	protected function readOnlySignals(): array
+	{
+		return [];
+	}
+
+
+	/**
+	 * Override in presenter to define which receiver substrings resolve to read privilege.
+	 * Any signal whose receiver contains one of these strings → "{component}-read".
+	 */
+	protected function readOnlyReceivers(): array
+	{
+		return [];
+	}
+
+
+	/**
 	 * Registers an authorization check executed on presenter startup.
 	 *
 	 * Verifies whether the current user is allowed to access the current
@@ -43,17 +62,37 @@ trait Authorization
 
 
 	/**
-	 * Resolves ACL resource name from the current presenter action or signal.
+	 * Resolves ACL privilege from the current presenter action or signal.
+	 *
+	 *   - page load (no signal)               → "{action}-read"
+	 *   - read-only receivers (e.g. dataGrid) → "{component}-read"
+	 *   - read-only signals (sort, page...)   → "{component}-read"
+	 *   - write signals (submit, delete...)   → "{component}-write"
 	 */
 	protected function resolveAclResource(Presenter $presenter): string
 	{
 		$signal = $presenter->getSignal();
 
 		if ($signal === null) {
-			return $presenter->getAction();
+			return $presenter->getAction() . '-read';
 		}
 
 		[$receiver, $name] = $signal;
-		return $receiver ? "$receiver-$name" : $name;
+
+		if ($receiver) {
+			$group = explode('-', $receiver)[0];
+			$isReadOnlyReceiver = (bool) array_filter(
+				$this->readOnlyReceivers(),
+				fn(string $r) => str_contains($receiver, $r),
+			);
+
+			if ($isReadOnlyReceiver || in_array($name, $this->readOnlySignals(), true)) {
+				return "$group-read";
+			}
+
+			return "$group-write";
+		}
+
+		return $name;
 	}
 }
