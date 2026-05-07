@@ -5,7 +5,7 @@ The package provides a central ACL factory, modular permission registration per 
 and automatic authorization checks in presenters.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://raw.githubusercontent.com/drago-ex/permission/main/license)
-[![PHP version](https://badge.fury.io/ph/drago-ex%2Fpermission.svg)](https://badge.fury.io/ph/drago-ex%2Fpermissionr)
+[![PHP version](https://badge.fury.io/ph/drago-ex%2Fpermission.svg)](https://badge.fury.io/ph/drago-ex%2Fpermission)
 [![Coding Style](https://github.com/drago-ex/permission/actions/workflows/coding-style.yml/badge.svg)](https://github.com/drago-ex/permission/actions/workflows/coding-style.yml)
 
 ## Requirements
@@ -14,7 +14,7 @@ and automatic authorization checks in presenters.
 - Composer
 
 ## Installation
-```
+```bash
 composer require drago-ex/permission
 ```
 
@@ -52,6 +52,28 @@ Typical resource naming:
 - Backend:Sign
 - Frontend:Article
 
+Example provider for a Sign module:
+
+```php
+use Drago\Permission\Provider;
+use Drago\Permission\Role;
+use Nette\Security\Permission;
+
+final class SignPermission implements Provider
+{
+	private const string Resource = 'Backend:Sign';
+
+
+	public function register(Permission $acl): void
+	{
+		$acl->addResource(self::Resource);
+		$acl->allow(Role::RoleGuest, self::Resource);
+	}
+}
+```
+
+This registers the `Backend:Sign` resource and grants access to guests (unauthenticated users),
+which is the minimum required for the login page to be accessible.
 
 ## DI Configuration
 Permission factory:
@@ -114,6 +136,7 @@ The trait automatically resolves which ACL privilege to check based on the curre
 | Signal from a read-only receiver | `{component}-read`  |
 | Signal listed as read-only       | `{component}-read`  |
 | Any other signal                 | `{component}-write` |
+| Direct presenter signal (no component) | `{signal}`    |
 
 ### Read-only signals
 
