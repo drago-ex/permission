@@ -195,7 +195,7 @@ Module provider:
 ```neon
 services:
 	signPermission:
-		class: App\Modules\Sign\SignPermission
+		class: App\UI\Sign\SignPermission
 		tags: [PermisionTag]
 ```
 
