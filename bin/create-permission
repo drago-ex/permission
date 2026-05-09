@@ -1,0 +1,311 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Nette\PhpGenerator\PhpFile;
+use Nette\PhpGenerator\PsrPrinter;
+
+final readonly class CreatePermissionCommand
+{
+	public function __construct(
+		private string $root,
+	) {
+	}
+
+	public function run(array $argv): int
+	{
+		$this->requireAutoload();
+
+		$arguments = array_slice($argv, 1);
+		if (in_array('--help', $arguments, true) || in_array('-h', $arguments, true)) {
+			$this->printHelp();
+			return 0;
+		}
+
+		['positionals' => $positionals, 'options' => $options] = $this->parseArgs($arguments);
+		if (count($positionals) < 2 || count($positionals) > 4) {
+			$this->error("Invalid arguments. Run with --help.");
+			return 1;
+		}
+
+		$input = $this->buildInput($positionals, $options);
+		if ($input === null) {
+			return 1;
+		}
+
+		if ($input->force === false && is_file($input->outputFile)) {
+			$this->warning("File already exists: {$input->outputFile}");
+			return 1;
+		}
+
+		if ($this->ensureDirectory($input->outputDir) === false) {
+			return 1;
+		}
+
+		$this->info("Generating {$input->className}...");
+		$content = $this->generateClass($input);
+
+		if (file_put_contents($input->outputFile, $content) === false) {
+			$this->error("Failed to write file: {$input->outputFile}");
+			return 1;
+		}
+
+		$this->success("Permission class created: {$input->outputFile}");
+		return 0;
+	}
+
+	/**
+	 * @return array{positionals: list<string>, options: array<string, string|bool>}
+	 */
+	private function parseArgs(array $args): array
+	{
+		$positionals = [];
+		$options = [];
+
+		foreach ($args as $arg) {
+			if (str_starts_with($arg, '--')) {
+				$raw = substr($arg, 2);
+				if ($raw === '') {
+					continue;
+				}
+				[$key, $value] = array_pad(explode('=', $raw, 2), 2, true);
+				$options[$key] = $value;
+				continue;
+			}
+			$positionals[] = $arg;
+		}
+
+		return ['positionals' => $positionals, 'options' => $options];
+	}
+
+	/**
+	 * @param list<string> $positionals
+	 * @param array<string, string|bool> $options
+	 */
+	private function buildInput(array $positionals, array $options): ?Input
+	{
+		$className = $positionals[0];
+		$namespaceName = $positionals[1];
+		$resource = $positionals[2] ?? ('Backend:' . preg_replace('~Permission$~', '', $className));
+		$outputDirArg = $positionals[3] ?? 'app/Permission';
+
+		$allowRole = $this->stringOption($options, 'allow-role') ?? 'RoleGuest';
+		$allowPrivilege = $this->stringOption($options, 'allow-privilege');
+		$addResource = $this->boolOption($options, 'add-resource', true);
+		$allowWithResource = $this->boolOption($options, 'allow-with-resource', true);
+		$force = array_key_exists('force', $options);
+
+		if ($this->isValidClassName($className) === false) {
+			$this->error("Invalid class name '$className'.");
+			return null;
+		}
+		if ($this->isValidNamespace($namespaceName) === false) {
+			$this->error("Invalid namespace '$namespaceName'.");
+			return null;
+		}
+		if ($this->isValidRoleConstant($allowRole) === false) {
+			$this->error("Invalid --allow-role '$allowRole'.");
+			return null;
+		}
+
+		$outputDir = $this->resolveOutputDir($outputDirArg);
+		$outputFile = rtrim($outputDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $className . '.php';
+
+		return new Input(
+			className: $className,
+			namespaceName: $namespaceName,
+			resource: $resource,
+			outputDir: $outputDir,
+			outputFile: $outputFile,
+			allowRole: $allowRole,
+			allowPrivilege: $allowPrivilege,
+			addResource: $addResource,
+			allowWithResource: $allowWithResource,
+			force: $force,
+		);
+	}
+
+	private function generateClass(Input $input): string
+	{
+		$file = new PhpFile();
+		$file->setStrictTypes();
+
+		$namespace = $file->addNamespace($input->namespaceName);
+		$namespace->addUse('Drago\\Permission\\Provider');
+		$namespace->addUse('Drago\\Permission\\Role');
+		$namespace->addUse('Nette\\Security\\Permission');
+
+		$class = $namespace->addClass($input->className);
+		$class->setFinal();
+		$class->addImplement('Drago\\Permission\\Provider');
+		$class->addConstant('Resource', $input->resource)
+			->setPrivate()
+			->setType('string');
+
+		$register = $class->addMethod('register');
+		$register->addParameter('acl')->setType('Nette\\Security\\Permission');
+		$register->setReturnType('void');
+		$register->setBody($this->buildRegisterBody($input));
+
+		return (new PsrPrinter())->printFile($file);
+	}
+
+	private function buildRegisterBody(Input $input): string
+	{
+		$lines = [];
+		if ($input->addResource) {
+			$lines[] = '$acl->addResource(self::Resource);';
+		}
+
+		if ($input->allowPrivilege !== null) {
+			$privilege = var_export($input->allowPrivilege, true);
+			if ($input->allowWithResource) {
+				$lines[] = sprintf('$acl->allow(Role::%s, self::Resource, %s);', $input->allowRole, $privilege);
+			} else {
+				$lines[] = sprintf('$acl->allow(Role::%s, null, %s);', $input->allowRole, $privilege);
+			}
+		} else {
+			if ($input->allowWithResource) {
+				$lines[] = sprintf('$acl->allow(Role::%s, self::Resource);', $input->allowRole);
+			} else {
+				$lines[] = sprintf('$acl->allow(Role::%s);', $input->allowRole);
+			}
+		}
+
+		return implode("\n", $lines);
+	}
+
+	private function ensureDirectory(string $path): bool
+	{
+		if (is_dir($path)) {
+			return true;
+		}
+		if (@mkdir($path, 0777, true) || is_dir($path)) {
+			return true;
+		}
+		$this->error("Could not create directory: $path");
+		return false;
+	}
+
+	private function requireAutoload(): void
+	{
+		$autoload = $this->root . '/vendor/autoload.php';
+		if (!is_file($autoload)) {
+			$this->error("Composer autoload not found. Run composer install.");
+			exit(1);
+		}
+		require $autoload;
+	}
+
+	private function resolveOutputDir(string $outputDirArg): string
+	{
+		if (str_starts_with($outputDirArg, DIRECTORY_SEPARATOR)) {
+			return $outputDirArg;
+		}
+
+		return $this->root . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $outputDirArg);
+	}
+
+	/**
+	 * @param array<string, string|bool> $options
+	 */
+	private function stringOption(array $options, string $key): ?string
+	{
+		$value = $options[$key] ?? null;
+		return is_string($value) && $value !== '' ? $value : null;
+	}
+
+	/**
+	 * @param array<string, string|bool> $options
+	 */
+	private function boolOption(array $options, string $key, bool $default): bool
+	{
+		if (!array_key_exists($key, $options)) {
+			return $default;
+		}
+
+		return (string) $options[$key] !== '0';
+	}
+
+	private function isValidClassName(string $className): bool
+	{
+		return (bool) preg_match('~^[A-Z][A-Za-z0-9_]*$~', $className);
+	}
+
+	private function isValidNamespace(string $namespace): bool
+	{
+		return (bool) preg_match('~^[A-Za-z_\\\\][A-Za-z0-9_\\\\]*$~', $namespace);
+	}
+
+	private function isValidRoleConstant(string $allowRole): bool
+	{
+		return (bool) preg_match('~^[A-Za-z_][A-Za-z0-9_]*$~', $allowRole);
+	}
+
+	private function printHelp(): void
+	{
+		echo <<<USAGE
+ℹ️ Generate a permission provider class.
+
+Usage:
+  create-permission <ClassName> <Namespace> [Resource] [OutputDir] [options]
+
+Examples:
+  create-permission SignPermission App\\Permission
+  create-permission SignPermission App\\Module\\Sign\\Permission Backend:Sign
+  create-permission SignPermission App\\Permission Backend:Sign app/Permission
+  create-permission SignPermission App\\Modules\\Sign\\Permission Backend:Sign app/Modules/Sign/Permission --allow-role=RoleAdmin
+  create-permission SignPermission App\\Modules\\Front\\Permission Front:Dashboard app/Modules/Front/Permission --allow-role=RoleUser --allow-privilege=view
+  create-permission AdminPermission App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
+
+Options:
+  --allow-role=<RoleConstant>   Default: RoleGuest (example: RoleAdmin)
+  --allow-privilege=<string>    Optional privilege for allow()
+  --add-resource=<0|1>          Default: 1, whether to generate addResource()
+  --allow-with-resource=<0|1>   Default: 1, whether allow() includes self::Resource
+  --force                       Overwrite existing file
+
+USAGE;
+	}
+
+	private function info(string $message): void
+	{
+		fwrite(STDOUT, "ℹ️ $message\n");
+	}
+
+	private function success(string $message): void
+	{
+		fwrite(STDOUT, "✅ $message\n");
+	}
+
+	private function warning(string $message): void
+	{
+		fwrite(STDERR, "⚠️ $message\n");
+	}
+
+	private function error(string $message): void
+	{
+		fwrite(STDERR, "❌ $message\n");
+	}
+}
+
+final readonly class Input
+{
+	public function __construct(
+		public string $className,
+		public string $namespaceName,
+		public string $resource,
+		public string $outputDir,
+		public string $outputFile,
+		public string $allowRole,
+		public ?string $allowPrivilege,
+		public bool $addResource,
+		public bool $allowWithResource,
+		public bool $force,
+	) {
+	}
+}
+
+$command = new CreatePermissionCommand(getcwd());
+exit($command->run($argv));
