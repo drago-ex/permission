@@ -75,6 +75,100 @@ final class SignPermission implements Provider
 This registers the `Backend:Sign` resource and grants access to guests (unauthenticated users),
 which is the minimum required for the login page to be accessible.
 
+## Permission Generator (CLI)
+The package provides a generator for module providers:
+
+```bash
+vendor/bin/create-permission
+```
+
+General usage:
+
+```bash
+vendor/bin/create-permission <ClassName> <Namespace> [Resource] [OutputDir] [options]
+```
+
+Example for `SignPermission`:
+
+```bash
+vendor/bin/create-permission SignPermission App\UI\Backend\Sign Backend:Sign app/UI/Backend/Sign
+```
+
+Example for `AdminPermission`:
+
+```bash
+vendor/bin/create-permission AdminPermission App\UI\Backend\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
+```
+
+### Options
+
+- `--allow-role=<RoleConstant>` default `RoleGuest`
+- `--allow-privilege=<string>` optional privilege argument for `allow()`
+- `--add-resource=<0|1>` default `1` (generate `$acl->addResource(...)`)
+- `--allow-with-resource=<0|1>` default `1` (generate `allow(..., self::Resource)`)
+- `--allow=<rule>` repeatable, custom allow rules
+- `--force` overwrite existing file
+
+`--allow` formats:
+
+- `--allow=RoleAdmin`
+- `--allow=RoleUser,self::Resource`
+- `--allow=RoleUser,self::Resource,default`
+
+Multi-rule example:
+
+```bash
+vendor/bin/create-permission AdminPermission App\UI\Backend\Admin Backend:Admin app/UI/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
+```
+
+Generated `register()` example:
+
+```php
+public function register(Permission $acl): void
+{
+	$acl->addResource(self::Resource);
+	$acl->allow(Role::RoleAdmin);
+	$acl->allow(Role::RoleUser, self::Resource, 'default');
+}
+```
+
+### Module Wrapper Scripts
+
+For one-command generation per module, add a local wrapper script in your app, e.g. `bin/create-admin-permission`:
+
+```php
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$root = dirname(__DIR__);
+$script = $root . '/vendor/bin/create-permission';
+
+$args = [
+	'AdminPermission',
+	'App\\UI\\Backend\\Admin',
+	'Backend:Admin',
+	'app/UI/Backend/Admin',
+	'--allow=RoleAdmin',
+	'--allow=RoleUser,self::Resource,default',
+];
+
+$command = 'php ' . escapeshellarg($script);
+foreach ($args as $arg) {
+	$command .= ' ' . escapeshellarg($arg);
+}
+
+passthru($command, $exitCode);
+exit($exitCode);
+```
+
+Run:
+
+```bash
+php bin/create-admin-permission
+```
+
 ## DI Configuration
 Permission factory:
 ```neon

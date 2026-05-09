@@ -25,7 +25,7 @@ final readonly class CreatePermissionCommand
 
 		['positionals' => $positionals, 'options' => $options] = $this->parseArgs($arguments);
 		if (count($positionals) < 2 || count($positionals) > 4) {
-			$this->error("Invalid arguments. Run with --help.");
+			$this->error('Invalid arguments. Run with --help.');
 			return 1;
 		}
 
@@ -56,7 +56,7 @@ final readonly class CreatePermissionCommand
 	}
 
 	/**
-	 * @return array{positionals: list<string>, options: array<string, string|bool>}
+	 * @return array{positionals: list<string>, options: array<string, string|bool|list<string>>}
 	 */
 	private function parseArgs(array $args): array
 	{
@@ -70,7 +70,19 @@ final readonly class CreatePermissionCommand
 					continue;
 				}
 				[$key, $value] = array_pad(explode('=', $raw, 2), 2, true);
-				$options[$key] = $value;
+				if ($key === 'allow') {
+					$existing = $options[$key] ?? [];
+					if (is_string($existing)) {
+						$existing = [$existing];
+					}
+					if (!is_array($existing)) {
+						$existing = [];
+					}
+					$existing[] = (string) $value;
+					$options[$key] = $existing;
+				} else {
+					$options[$key] = $value;
+				}
 				continue;
 			}
 			$positionals[] = $arg;
@@ -81,7 +93,7 @@ final readonly class CreatePermissionCommand
 
 	/**
 	 * @param list<string> $positionals
-	 * @param array<string, string|bool> $options
+	 * @param array<string, string|bool|list<string>> $options
 	 */
 	private function buildInput(array $positionals, array $options): ?Input
 	{
@@ -94,6 +106,7 @@ final readonly class CreatePermissionCommand
 		$allowPrivilege = $this->stringOption($options, 'allow-privilege');
 		$addResource = $this->boolOption($options, 'add-resource', true);
 		$allowWithResource = $this->boolOption($options, 'allow-with-resource', true);
+		$allowRules = $this->allowRulesOption($options);
 		$force = array_key_exists('force', $options);
 
 		if ($this->isValidClassName($className) === false) {
@@ -107,6 +120,12 @@ final readonly class CreatePermissionCommand
 		if ($this->isValidRoleConstant($allowRole) === false) {
 			$this->error("Invalid --allow-role '$allowRole'.");
 			return null;
+		}
+		foreach ($allowRules as $rule) {
+			if ($this->isValidRoleConstant($rule->role) === false) {
+				$this->error("Invalid --allow role '{$rule->role}'.");
+				return null;
+			}
 		}
 
 		$outputDir = $this->resolveOutputDir($outputDirArg);
@@ -122,6 +141,7 @@ final readonly class CreatePermissionCommand
 			allowPrivilege: $allowPrivilege,
 			addResource: $addResource,
 			allowWithResource: $allowWithResource,
+			allowRules: $allowRules,
 			force: $force,
 		);
 	}
@@ -158,18 +178,36 @@ final readonly class CreatePermissionCommand
 			$lines[] = '$acl->addResource(self::Resource);';
 		}
 
-		if ($input->allowPrivilege !== null) {
-			$privilege = var_export($input->allowPrivilege, true);
-			if ($input->allowWithResource) {
-				$lines[] = sprintf('$acl->allow(Role::%s, self::Resource, %s);', $input->allowRole, $privilege);
-			} else {
-				$lines[] = sprintf('$acl->allow(Role::%s, null, %s);', $input->allowRole, $privilege);
+		if ($input->allowRules !== []) {
+			foreach ($input->allowRules as $rule) {
+				$resourceArg = $rule->withResource ? ($rule->resource ?? 'self::Resource') : 'null';
+				if ($rule->privilege !== null) {
+					$lines[] = sprintf(
+						'$acl->allow(Role::%s, %s, %s);',
+						$rule->role,
+						$resourceArg,
+						var_export($rule->privilege, true),
+					);
+				} elseif ($rule->withResource) {
+					$lines[] = sprintf('$acl->allow(Role::%s, %s);', $rule->role, $resourceArg);
+				} else {
+					$lines[] = sprintf('$acl->allow(Role::%s);', $rule->role);
+				}
 			}
 		} else {
-			if ($input->allowWithResource) {
-				$lines[] = sprintf('$acl->allow(Role::%s, self::Resource);', $input->allowRole);
+			if ($input->allowPrivilege !== null) {
+				$privilege = var_export($input->allowPrivilege, true);
+				if ($input->allowWithResource) {
+					$lines[] = sprintf('$acl->allow(Role::%s, self::Resource, %s);', $input->allowRole, $privilege);
+				} else {
+					$lines[] = sprintf('$acl->allow(Role::%s, null, %s);', $input->allowRole, $privilege);
+				}
 			} else {
-				$lines[] = sprintf('$acl->allow(Role::%s);', $input->allowRole);
+				if ($input->allowWithResource) {
+					$lines[] = sprintf('$acl->allow(Role::%s, self::Resource);', $input->allowRole);
+				} else {
+					$lines[] = sprintf('$acl->allow(Role::%s);', $input->allowRole);
+				}
 			}
 		}
 
@@ -192,7 +230,7 @@ final readonly class CreatePermissionCommand
 	{
 		$autoload = $this->root . '/vendor/autoload.php';
 		if (!is_file($autoload)) {
-			$this->error("Composer autoload not found. Run composer install.");
+			$this->error('Composer autoload not found. Run composer install.');
 			exit(1);
 		}
 		require $autoload;
@@ -208,7 +246,7 @@ final readonly class CreatePermissionCommand
 	}
 
 	/**
-	 * @param array<string, string|bool> $options
+	 * @param array<string, string|bool|list<string>> $options
 	 */
 	private function stringOption(array $options, string $key): ?string
 	{
@@ -217,7 +255,7 @@ final readonly class CreatePermissionCommand
 	}
 
 	/**
-	 * @param array<string, string|bool> $options
+	 * @param array<string, string|bool|list<string>> $options
 	 */
 	private function boolOption(array $options, string $key, bool $default): bool
 	{
@@ -226,6 +264,43 @@ final readonly class CreatePermissionCommand
 		}
 
 		return (string) $options[$key] !== '0';
+	}
+
+	/**
+	 * @param array<string, string|bool|list<string>> $options
+	 * @return list<AllowRule>
+	 */
+	private function allowRulesOption(array $options): array
+	{
+		$raw = $options['allow'] ?? [];
+		if (is_string($raw)) {
+			$raw = [$raw];
+		}
+		if (!is_array($raw)) {
+			return [];
+		}
+
+		$rules = [];
+		foreach ($raw as $line) {
+			$parts = array_map('trim', explode(',', $line));
+			$role = $parts[0] ?? '';
+			if ($role === '') {
+				continue;
+			}
+			$resource = $parts[1] ?? null;
+			$resource = $resource === '' ? null : $resource;
+			$privilege = $parts[2] ?? null;
+			$privilege = $privilege === '' ? null : $privilege;
+
+			$rules[] = new AllowRule(
+				role: $role,
+				withResource: $resource !== null,
+				resource: $resource,
+				privilege: $privilege,
+			);
+		}
+
+		return $rules;
 	}
 
 	private function isValidClassName(string $className): bool
@@ -246,7 +321,7 @@ final readonly class CreatePermissionCommand
 	private function printHelp(): void
 	{
 		echo <<<USAGE
-ℹ️ Generate a permission provider class.
+INFO Generate a permission provider class.
 
 Usage:
   create-permission <ClassName> <Namespace> [Resource] [OutputDir] [options]
@@ -258,12 +333,14 @@ Examples:
   create-permission SignPermission App\\Modules\\Sign\\Permission Backend:Sign app/Modules/Sign/Permission --allow-role=RoleAdmin
   create-permission SignPermission App\\Modules\\Front\\Permission Front:Dashboard app/Modules/Front/Permission --allow-role=RoleUser --allow-privilege=view
   create-permission AdminPermission App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
+  create-permission AdminPermission App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
 
 Options:
   --allow-role=<RoleConstant>   Default: RoleGuest (example: RoleAdmin)
   --allow-privilege=<string>    Optional privilege for allow()
   --add-resource=<0|1>          Default: 1, whether to generate addResource()
   --allow-with-resource=<0|1>   Default: 1, whether allow() includes self::Resource
+  --allow=<rule>                Repeatable. Format: Role | Role,resource | Role,resource,privilege
   --force                       Overwrite existing file
 
 USAGE;
@@ -271,27 +348,30 @@ USAGE;
 
 	private function info(string $message): void
 	{
-		fwrite(STDOUT, "ℹ️ $message\n");
+		fwrite(STDOUT, "INFO $message\n");
 	}
 
 	private function success(string $message): void
 	{
-		fwrite(STDOUT, "✅ $message\n");
+		fwrite(STDOUT, "OK $message\n");
 	}
 
 	private function warning(string $message): void
 	{
-		fwrite(STDERR, "⚠️ $message\n");
+		fwrite(STDERR, "WARN $message\n");
 	}
 
 	private function error(string $message): void
 	{
-		fwrite(STDERR, "❌ $message\n");
+		fwrite(STDERR, "ERR $message\n");
 	}
 }
 
 final readonly class Input
 {
+	/**
+	 * @param list<AllowRule> $allowRules
+	 */
 	public function __construct(
 		public string $className,
 		public string $namespaceName,
@@ -302,7 +382,19 @@ final readonly class Input
 		public ?string $allowPrivilege,
 		public bool $addResource,
 		public bool $allowWithResource,
+		public array $allowRules,
 		public bool $force,
+	) {
+	}
+}
+
+final readonly class AllowRule
+{
+	public function __construct(
+		public string $role,
+		public bool $withResource,
+		public ?string $resource,
+		public ?string $privilege,
 	) {
 	}
 }
