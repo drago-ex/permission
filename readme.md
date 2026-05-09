@@ -25,6 +25,17 @@ composer require drago-ex/permission
 - Automatic presenter authorization
 - Action and signal based privileges
 
+## Related Package: Dynamic Role Management
+For dynamic role and access management, use:
+
+- `drago-ex/project-permission`: https://github.com/drago-ex/project-permission
+
+This package is built on top of `drago-ex/permission` and provides:
+
+- role creation
+- assigning roles to users
+- allowing or denying access per role
+
 ## Roles
 Default roles:
 
