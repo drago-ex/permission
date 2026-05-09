@@ -181,6 +181,23 @@ php bin/create-admin-permission
 ```
 
 ## DI Configuration
+The package already contains default configuration in:
+
+- `vendor/drago-ex/permission/src/Drago/Permission/conf.neon`
+
+Recommended project setup is to include this file, not copy it manually.
+
+Example:
+```neon
+includes:
+	- ../vendor/drago-ex/permission/src/Drago/Permission/conf.neon
+```
+
+The bundled config already contains:
+
+- `permissionFactory` service registration
+- automatic `search` registration for `*Permission` classes in `%appDir%/UI`
+
 Permission factory:
 ```neon
 services:
