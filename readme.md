@@ -1,13 +1,13 @@
-## Drago Permission
-Lightweight ACL and role management.
+# Drago Permission
 
+Lightweight ACL and role management.
 The package provides a central ACL factory, modular permission registration per module,
 and automatic authorization checks in presenters.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://raw.githubusercontent.com/drago-ex/permission/main/license)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/drago-ex/permission/blob/main/license)
 [![PHP version](https://badge.fury.io/ph/drago-ex%2Fpermission.svg)](https://badge.fury.io/ph/drago-ex%2Fpermission)
-[![Coding Style](https://github.com/drago-ex/permission/actions/workflows/coding-style.yml/badge.svg)](https://github.com/drago-ex/permission/actions/workflows/coding-style.yml)
 [![Tests](https://github.com/drago-ex/permission/actions/workflows/tests.yml/badge.svg)](https://github.com/drago-ex/permission/actions/workflows/tests.yml)
+[![Coding Style](https://github.com/drago-ex/permission/actions/workflows/coding-style.yml/badge.svg)](https://github.com/drago-ex/permission/actions/workflows/coding-style.yml)
 
 ## Requirements
 - PHP >= 8.3
@@ -246,8 +246,8 @@ class BasePresenter extends Nette\Application\UI\Presenter
 All presenters extending `BasePresenter` will then have automatic authorization checks applied.
 
 Unauthorized access:
-- not logged in → redirect to Sign:in
-- logged in but forbidden → HTTP 403
+- not logged in â†’ redirect to Sign:in
+- logged in but forbidden â†’ HTTP 403
 
 ### Privilege resolution
 
@@ -294,13 +294,13 @@ class ArticlePresenter extends BasePresenter
 {
 	protected function readOnlySignals(): array
 	{
-		// these signals only read data → checked as "{component}-read"
+		// these signals only read data â†’ checked as "{component}-read"
 		return ['sort', 'page'];
 	}
 
 	protected function readOnlyReceivers(): array
 	{
-		// any signal from a receiver containing "Grid" → checked as "{component}-read"
+		// any signal from a receiver containing "Grid" â†’ checked as "{component}-read"
 		return ['Grid'];
 	}
 }
