@@ -36,7 +36,7 @@ final readonly class CreatePermissionCommand
 
 		if ($input->force === false && is_file($input->outputFile)) {
 			$this->warning("File already exists: {$input->outputFile}");
-			return 1;
+			return 0;
 		}
 
 		if ($this->ensureDirectory($input->outputDir) === false) {
