@@ -292,7 +292,7 @@ class ArticlePresenter extends BasePresenter
 
 	protected function readOnlyReceivers(): array
 	{
-		// any signal from a receiver containing "Grid" â†’ checked as "{component}-read"
+		// any signal from a receiver containing "Grid" checked as "{component}-read"
 		return ['Grid'];
 	}
 }
