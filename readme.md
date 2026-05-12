@@ -238,8 +238,8 @@ class BasePresenter extends Nette\Application\UI\Presenter
 All presenters extending `BasePresenter` will then have automatic authorization checks applied.
 
 Unauthorized access:
-- not logged in â†’ redirect to Sign:in
-- logged in but forbidden â†’ HTTP 403
+- not logged in redirect to Sign:in
+- logged in but forbidden HTTP 403
 
 ### Privilege resolution
 
