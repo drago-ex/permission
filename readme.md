@@ -286,7 +286,7 @@ class ArticlePresenter extends BasePresenter
 {
 	protected function readOnlySignals(): array
 	{
-		// these signals only read data â†’ checked as "{component}-read"
+		// these signals only read data checked as "{component}-read"
 		return ['sort', 'page'];
 	}
 
