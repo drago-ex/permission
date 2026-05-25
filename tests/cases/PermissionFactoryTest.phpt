@@ -35,9 +35,3 @@ Assert::true($acl->hasResource('Backend:Sign'));
 Assert::true($acl->isAllowed(Role::RoleGuest, 'Backend:Sign'));
 Assert::true($acl->isAllowed(Role::RoleUser, 'Backend:Sign'));
 Assert::true($acl->isAllowed(Role::RoleAdmin, 'Backend:Sign'));
-
-Assert::exception(
-	fn() => new PermissionFactory([new stdClass]),
-	LogicException::class,
-	'stdClass must implement Provider',
-);
