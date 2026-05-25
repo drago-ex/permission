@@ -55,18 +55,21 @@ final class TestAuthorization
 }
 
 $presenter = new TestPresenter;
+$auth = new TestAuthorization;
 
 $presenter->configure('default', null, null);
-Assert::same('default-read', (new TestAuthorization)->resolve($presenter));
+Assert::same('default-read', $auth->resolve($presenter));
 
 $presenter->configure('default', 'articleGrid', 'delete');
-Assert::same('articleGrid-write', (new TestAuthorization)->resolve($presenter));
+Assert::same('articleGrid-write', $auth->resolve($presenter));
 
 $presenter->configure('default', 'articleGrid', 'sort');
-Assert::same('articleGrid-read', new TestAuthorization(['sort'])->resolve($presenter));
+$authWithSignals = new TestAuthorization(['sort']);
+Assert::same('articleGrid-read', $authWithSignals->resolve($presenter));
 
 $presenter->configure('default', 'articleGrid-main', 'delete');
-Assert::same('articleGrid-read', new TestAuthorization([], ['articleGrid'])->resolve($presenter));
+$authWithReceivers = new TestAuthorization([], ['articleGrid']);
+Assert::same('articleGrid-read', $authWithReceivers->resolve($presenter));
 
 $presenter->configure('default', null, 'ping');
-Assert::same('ping', (new TestAuthorization)->resolve($presenter));
+Assert::same('ping', $auth->resolve($presenter));
