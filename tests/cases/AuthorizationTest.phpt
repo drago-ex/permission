@@ -15,15 +15,12 @@ final class TestPresenter extends Presenter
 		$reflection = new ReflectionClass(Presenter::class);
 
 		$actionProperty = $reflection->getProperty('action');
-		$actionProperty->setAccessible(true);
 		$actionProperty->setValue($this, $action);
 
 		$signalReceiverProperty = $reflection->getProperty('signalReceiver');
-		$signalReceiverProperty->setAccessible(true);
 		$signalReceiverProperty->setValue($this, $receiver ?? '');
 
 		$signalProperty = $reflection->getProperty('signal');
-		$signalProperty->setAccessible(true);
 		$signalProperty->setValue($this, $signal);
 	}
 }
@@ -33,8 +30,8 @@ final class TestAuthorization
 	use Authorization;
 
 	public function __construct(
-		private array $signals = [],
-		private array $receivers = [],
+		private readonly array $signals = [],
+		private readonly array $receivers = [],
 	) {
 	}
 
