@@ -1,10 +1,5 @@
 <?php
 
-/**
- * Drago Extension
- * Package built on Nette Framework
- */
-
 declare(strict_types=1);
 
 namespace Drago\Permission;
@@ -15,19 +10,14 @@ use Nette\Security\User;
 
 trait Authorization
 {
-	/**
-	 * Override in presenter to define which signal names resolve to read privilege.
-	 */
+	/** @return list<string> */
 	protected function readOnlySignals(): array
 	{
 		return [];
 	}
 
 
-	/**
-	 * Override in presenter to define which receiver substrings resolve to read privilege.
-	 * Any signal whose receiver contains one of these strings → "{component}-read".
-	 */
+	/** @return list<string> */
 	protected function readOnlyReceivers(): array
 	{
 		return [];
@@ -36,11 +26,7 @@ trait Authorization
 
 	/**
 	 * Registers an authorization check executed on presenter startup.
-	 *
-	 * Verifies whether the current user is allowed to access the current
-	 * presenter action or signal. If the user is not authenticated,
-	 * they are redirected to the login page. If authenticated but not
-	 * authorized, a 403 error is thrown.
+	 * Redirects unauthenticated users to login, throws 403 for unauthorized access.
 	 */
 	public function injectAuthorization(Presenter $presenter, User $user): void
 	{
@@ -63,11 +49,7 @@ trait Authorization
 
 	/**
 	 * Resolves ACL privilege from the current presenter action or signal.
-	 *
-	 *   - page load (no signal)               → "{action}-read"
-	 *   - read-only receivers (e.g. dataGrid) → "{component}-read"
-	 *   - read-only signals (sort, page...)   → "{component}-read"
-	 *   - write signals (submit, delete...)   → "{component}-write"
+	 * Page load → "{action}-read", signals → "{component}-read/write".
 	 */
 	protected function resolveAclResource(Presenter $presenter): string
 	{
@@ -79,7 +61,7 @@ trait Authorization
 
 		[$receiver, $name] = $signal;
 
-		if ($receiver) {
+		if (is_string($receiver) && $receiver !== '') {
 			$group = explode('-', $receiver)[0];
 			$isReadOnlyReceiver = (bool) array_filter(
 				$this->readOnlyReceivers(),
@@ -93,6 +75,6 @@ trait Authorization
 			return "$group-write";
 		}
 
-		return $name;
+		return is_string($name) ? $name : '';
 	}
 }
