@@ -66,10 +66,10 @@ $presenter->configure('default', 'articleGrid', 'delete');
 Assert::same('articleGrid-write', (new TestAuthorization)->resolve($presenter));
 
 $presenter->configure('default', 'articleGrid', 'sort');
-Assert::same('articleGrid-read', (new TestAuthorization(signals: ['sort']))->resolve($presenter));
+Assert::same('articleGrid-read', new TestAuthorization(signals: ['sort'])->resolve($presenter));
 
 $presenter->configure('default', 'articleGrid-main', 'delete');
-Assert::same('articleGrid-read', (new TestAuthorization(receivers: ['articleGrid']))->resolve($presenter));
+Assert::same('articleGrid-read', new TestAuthorization(receivers: ['articleGrid'])->resolve($presenter));
 
 $presenter->configure('default', null, 'ping');
 Assert::same('ping', (new TestAuthorization)->resolve($presenter));
