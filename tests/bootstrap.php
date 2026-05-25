@@ -2,7 +2,15 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../vendor/nette/tester/src/bootstrap.php';
+if (@!include __DIR__ . '/../vendor/autoload.php') {
+	echo 'Install Nette Tester using `composer install`';
+	exit(1);
+}
 
 Tester\Environment::setup();
+date_default_timezone_set('Europe/Prague');
+
+$loader = new Nette\Loaders\RobotLoader;
+$loader->addDirectory(__DIR__ . '/../src');
+$loader->setTempDirectory(__DIR__ . '/tmp');
+$loader->register();
