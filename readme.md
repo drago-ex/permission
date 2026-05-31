@@ -253,29 +253,99 @@ The trait automatically resolves which ACL privilege to check based on the curre
 | Any other signal                 | `{component}-write` |
 | Direct presenter signal (no component) | `{signal}`    |
 
+For component signals, Nette returns a pair from `Presenter::getSignal()`:
+
+```php
+[$receiver, $signal] = $presenter->getSignal();
+```
+
+The receiver is the component path joined by hyphens. For example, if a presenter has a `roles`
+component and that component contains a `dataGrid` component with a `paginator` subcomponent,
+Nette can produce a signal like:
+
+```text
+roles-dataGrid-paginator:page
+```
+
+This is resolved as:
+
+```php
+$receiver = 'roles-dataGrid-paginator';
+$signal = 'page';
+```
+
+The authorization trait uses the first receiver segment as the privilege group:
+
+```php
+$group = explode('-', $receiver)[0]; // "roles"
+```
+
+So the signal above resolves to:
+
+```text
+roles-read
+```
+
+when it is configured as read-only, otherwise it resolves to:
+
+```text
+roles-write
+```
+
 ### Read-only signals
 
-Override `readOnlySignals()` to declare signal names that should be treated as read operations (e.g. sorting, pagination):
+Override `readOnlySignals()` to declare signal names that should be treated as read operations.
+This checks only the signal name, not the component path.
 
 ```php
 protected function readOnlySignals(): array
 {
-	return ['sort', 'page', 'itemsPerPage'];
+	return ['sort', 'page', 'resetFilters', 'setPageSize'];
 }
 ```
 
+Examples:
+
+| Nette signal                      | Receiver                 | Signal          | Resolved privilege |
+|-----------------------------------|--------------------------|-----------------|--------------------|
+| `roles-dataGrid:sort`             | `roles-dataGrid`         | `sort`          | `roles-read`       |
+| `roles-dataGrid-paginator:page`   | `roles-dataGrid-paginator` | `page`        | `roles-read`       |
+| `roles-dataGrid:action`           | `roles-dataGrid`         | `action`        | `roles-write`      |
+
 ### Read-only receivers
 
-Override `readOnlyReceivers()` to declare component name substrings whose signals should always resolve to read privilege (e.g. a data grid that only displays data):
+Override `readOnlyReceivers()` to declare component path substrings whose signals should always
+resolve to read privilege. This checks the receiver path, not the signal name.
 
 ```php
 protected function readOnlyReceivers(): array
 {
-	return ['articleGrid', 'userGrid'];
+	return ['Grid-filters', 'Grid-paginator', 'Grid-pageSize'];
 }
 ```
 
 Any signal whose receiver name contains one of these strings will be resolved as `{component}-read` regardless of the signal name.
+
+This is useful for nested controls where the signal name is generic, for example a filter form submit:
+
+```text
+roles-dataGrid-filters-form:submit
+```
+
+The signal name is `submit`, but the receiver contains `Grid-filters`, so it resolves to:
+
+```text
+roles-read
+```
+
+Be careful with broad receiver masks such as `Grid`. They make every signal from that receiver read-only,
+including row actions like:
+
+```text
+roles-dataGrid:action
+```
+
+Use broad receiver masks only when the whole component is read-only.
 
 ### Full example
 
@@ -287,16 +357,32 @@ class ArticlePresenter extends BasePresenter
 	protected function readOnlySignals(): array
 	{
 		// these signals only read data checked as "{component}-read"
-		return ['sort', 'page'];
+		return ['sort', 'page', 'resetFilters', 'setPageSize'];
 	}
 
 	protected function readOnlyReceivers(): array
 	{
-		// any signal from a receiver containing "Grid" checked as "{component}-read"
-		return ['Grid'];
+		// read-only DataGrid subcomponents with generic signal names
+		return ['Grid-filters', 'Grid-paginator', 'Grid-pageSize'];
 	}
 }
 ```
 
-With this configuration the ACL check for `articleGrid:sort` resolves to `articleGrid-read`,
-while `articleGrid:delete` resolves to `articleGrid-write`.
+With this configuration:
+
+| Nette signal                         | Resolved privilege |
+|--------------------------------------|--------------------|
+| `roles-dataGrid:sort`                | `roles-read`       |
+| `roles-dataGrid-paginator:page`      | `roles-read`       |
+| `roles-dataGrid-filters:resetFilters`| `roles-read`       |
+| `roles-dataGrid-filters-form:submit` | `roles-read`       |
+| `roles-dataGrid-pageSize:setPageSize`| `roles-read`       |
+| `roles-dataGrid:action`              | `roles-write`      |
+
+If you are not sure what Nette produces for a specific request, temporarily inspect:
+
+```php
+bdump($this->getSignal());
+```
+
+or log the value inside `resolveAclResource()`.
