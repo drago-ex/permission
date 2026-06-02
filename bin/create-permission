@@ -348,22 +348,22 @@ USAGE;
 
 	private function info(string $message): void
 	{
-		fwrite(STDOUT, "ℹ $message\n");
+		fwrite(STDOUT, "INFO $message\n");
 	}
 
 	private function success(string $message): void
 	{
-		fwrite(STDOUT, "✅ $message\n");
+		fwrite(STDOUT, "OK $message\n");
 	}
 
 	private function warning(string $message): void
 	{
-		fwrite(STDERR, "⚠ $message\n");
+		fwrite(STDERR, "WARN $message\n");
 	}
 
 	private function error(string $message): void
 	{
-		fwrite(STDERR, "❌ $message\n");
+		fwrite(STDERR, "ERROR $message\n");
 	}
 }
 
