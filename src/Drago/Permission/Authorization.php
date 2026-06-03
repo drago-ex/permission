@@ -49,7 +49,7 @@ trait Authorization
 
 	/**
 	 * Resolves ACL privilege from the current presenter action or signal.
-	 * Page load → "{action}-read", signals → "{component}-read/write".
+	 * Page load -> "{action}-read", signals -> "{component}-read/write".
 	 */
 	protected function resolveAclResource(Presenter $presenter): string
 	{
