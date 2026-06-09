@@ -8,5 +8,5 @@ services:
 search:
 	permissions:
 		in: %appDir%/UI
-		classes: [*Permission]
+		classes: [PermissionProvider]
 		tags: [PermisionTag]

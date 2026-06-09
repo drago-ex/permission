@@ -71,7 +71,7 @@ use Drago\Permission\Provider;
 use Drago\Permission\Role;
 use Nette\Security\Permission;
 
-final class SignPermission implements Provider
+final class PermissionProvider implements Provider
 {
 	private const string Resource = 'Backend:Sign';
 
@@ -100,16 +100,19 @@ General usage:
 vendor/bin/create-permission <ClassName> <Namespace> [Resource] [OutputDir] [options]
 ```
 
-Example for `SignPermission`:
+When you use the shared `PermissionProvider` class name, pass the resource and output directory explicitly.
+The class name is intentionally the same in every module and the namespace decides where the provider belongs.
+
+Example for a Sign module:
 
 ```bash
-vendor/bin/create-permission SignPermission App\UI\Backend\Sign Backend:Sign app/UI/Backend/Sign
+vendor/bin/create-permission PermissionProvider App\UI\Backend\Sign Backend:Sign app/UI/Backend/Sign
 ```
 
-Example for `AdminPermission`:
+Example for an Admin module:
 
 ```bash
-vendor/bin/create-permission AdminPermission App\UI\Backend\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
+vendor/bin/create-permission PermissionProvider App\UI\Backend\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
 ```
 
 ### Options
@@ -130,7 +133,7 @@ vendor/bin/create-permission AdminPermission App\UI\Backend\Admin Backend:Admin 
 Multi-rule example:
 
 ```bash
-vendor/bin/create-permission AdminPermission App\UI\Backend\Admin Backend:Admin app/UI/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
+vendor/bin/create-permission PermissionProvider App\UI\Backend\Admin Backend:Admin app/UI/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
 ```
 
 Generated `register()` example:
@@ -146,7 +149,8 @@ public function register(Permission $acl): void
 
 ### Module Wrapper Scripts
 
-For one-command generation per module, add a local wrapper script in your app, e.g. `bin/create-admin-permission`:
+For one-command generation per module, add a local wrapper script in your app, e.g. `bin/create-admin-permission`.
+The class can keep the same `PermissionProvider` name in each module because every module has its own namespace:
 
 ```php
 #!/usr/bin/env php
@@ -158,7 +162,7 @@ $root = dirname(__DIR__);
 $script = $root . '/vendor/bin/create-permission';
 
 $args = [
-	'AdminPermission',
+	'PermissionProvider',
 	'App\\UI\\Backend\\Admin',
 	'Backend:Admin',
 	'app/UI/Backend/Admin',
@@ -189,7 +193,7 @@ The package already contains default configuration in:
 The bundled config already contains:
 
 - `permissionFactory` service registration
-- automatic `search` registration for `*Permission` classes in `%appDir%/UI`
+- automatic `search` registration for `PermissionProvider` classes in `%appDir%/UI`
 
 Permission factory:
 ```neon
@@ -205,7 +209,7 @@ Module provider:
 ```neon
 services:
 	signPermission:
-		class: App\UI\Sign\SignPermission
+		class: App\UI\Sign\PermissionProvider
 		tags: [PermisionTag]
 ```
 
@@ -214,7 +218,7 @@ For larger applications with many providers, you can use the `search` section to
 search:
 	permissions:
 		in: %appDir%/UI
-		classes: [*Permission]
+		classes: [PermissionProvider]
 		tags: [PermisionTag]
 ```
 

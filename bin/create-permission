@@ -57,7 +57,7 @@ final readonly class CreatePermissionCommand
 			return 1;
 		}
 
-		$this->success("Permission class created: {$input->outputFile}");
+		$this->success("Permission provider created: {$input->outputFile}");
 		return 0;
 	}
 
@@ -105,8 +105,8 @@ final readonly class CreatePermissionCommand
 	{
 		$className = $positionals[0];
 		$namespaceName = $positionals[1];
-		$resource = $positionals[2] ?? ('Backend:' . preg_replace('~Permission$~', '', $className));
-		$outputDirArg = $positionals[3] ?? 'app/Permission';
+		$resource = $positionals[2] ?? ('Backend:' . preg_replace('~Component$~', '', $className));
+		$outputDirArg = $positionals[3] ?? 'app/Component';
 
 		$allowRole = $this->stringOption($options, 'allow-role') ?? 'RoleGuest';
 		$allowPrivilege = $this->stringOption($options, 'allow-privilege');
@@ -333,13 +333,11 @@ Usage:
   create-permission <ClassName> <Namespace> [Resource] [OutputDir] [options]
 
 Examples:
-  create-permission SignPermission App\\Permission
-  create-permission SignPermission App\\Module\\Sign\\Permission Backend:Sign
-  create-permission SignPermission App\\Permission Backend:Sign app/Permission
-  create-permission SignPermission App\\Modules\\Sign\\Permission Backend:Sign app/Modules/Sign/Permission --allow-role=RoleAdmin
-  create-permission SignPermission App\\Modules\\Front\\Permission Front:Dashboard app/Modules/Front/Permission --allow-role=RoleUser --allow-privilege=view
-  create-permission AdminPermission App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
-  create-permission AdminPermission App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
+  create-permission PermissionProvider App\\UI\\Backend\\Sign Backend:Sign app/UI/Backend/Sign
+  create-permission PermissionProvider App\\Modules\\Sign\\Permission Backend:Sign app/Modules/Sign/Permission --allow-role=RoleAdmin
+  create-permission PermissionProvider App\\Modules\\Front\\Permission Front:Dashboard app/Modules/Front/Permission --allow-role=RoleUser --allow-privilege=view
+  create-permission PermissionProvider App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
+  create-permission PermissionProvider App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
 
 Options:
   --allow-role=<RoleConstant>   Default: RoleGuest (example: RoleAdmin)
