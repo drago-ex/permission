@@ -165,7 +165,7 @@ $args = [
 	'PermissionProvider',
 	'App\\UI\\Backend\\Admin',
 	'Backend:Admin',
-	'App/UI/Backend/Admin',
+	'app/UI/Backend/Admin',
 	'--allow=RoleAdmin',
 	'--allow=RoleUser,self::Resource,default',
 ];
