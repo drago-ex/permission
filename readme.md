@@ -155,20 +155,27 @@ The class can keep the same `PermissionProvider` name in each module because eve
 ```php
 #!/usr/bin/env php
 <?php
-
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $script = $root . '/vendor/bin/create-permission';
 
-$args = [
-	'PermissionProvider',
-	'App\\UI\\Backend\\Admin',
-	'Backend:Admin',
-	'app/UI/Backend/Admin',
+// 1. Positional arguments with clear description.
+$positionalArgs = [
+	'className'   => 'PermissionProvider',
+	'namespace'   => 'App\\UI\\Backend\\Admin',
+	'resource'    => 'Backend:Admin',
+	'outputDir'   => 'app/UI/Backend/Admin',
+];
+
+// 2. Optional switches (options).
+$options = [
 	'--allow=RoleAdmin',
 	'--allow=RoleUser,self::Resource,default',
 ];
+
+// We will combine them into one flat field for the shell.
+$args = array_merge(array_values($positionalArgs), $options);
 
 $command = 'php ' . escapeshellarg($script);
 foreach ($args as $arg) {
