@@ -7,7 +7,6 @@ namespace Drago\Permission;
 use Nette\Security\Permission;
 
 
-/** Factory for creating a Nette Component (ACL) instance with default roles and providers. */
 class PermissionFactory
 {
 	/** @var iterable<int, Provider> */
@@ -21,7 +20,6 @@ class PermissionFactory
 	}
 
 
-	/** Creates and returns a Component object with default roles and registered providers. */
 	public function create(): Permission
 	{
 		$acl = new Permission;
