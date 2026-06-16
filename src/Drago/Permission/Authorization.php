@@ -36,7 +36,7 @@ trait Authorization
 			if (!$user->isAllowed($presenter->getName(), $resource)) {
 				if (!$user->isLoggedIn()) {
 					$presenter->flashMessage('You must be logged in.');
-					$presenter->redirect('Sign:in', [
+					$presenter->redirect(':Sign:in', [
 						'backlink' => $presenter->storeRequest(),
 					]);
 				} else {
