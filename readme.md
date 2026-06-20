@@ -106,13 +106,13 @@ The class name is intentionally the same in every module and the namespace decid
 Example for a Sign module:
 
 ```bash
-vendor/bin/create-permission PermissionProvider App\UI\Backend\Sign Backend:Sign app/UI/Backend/Sign
+vendor/bin/create-permission PermissionProvider App\Presentation\Sign Sign app/Presentation/Sign
 ```
 
 Example for an Admin module:
 
 ```bash
-vendor/bin/create-permission PermissionProvider App\UI\Backend\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
+vendor/bin/create-permission PermissionProvider App\Presentation\Backend\Admin Backend:Admin app/Presentation/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
 ```
 
 ### Options
@@ -133,7 +133,7 @@ vendor/bin/create-permission PermissionProvider App\UI\Backend\Admin Backend:Adm
 Multi-rule example:
 
 ```bash
-vendor/bin/create-permission PermissionProvider App\UI\Backend\Admin Backend:Admin app/UI/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
+vendor/bin/create-permission PermissionProvider App\Presentation\Backend\Admin Backend:Admin app/Presentation/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
 ```
 
 Generated `register()` example:
@@ -163,9 +163,9 @@ $script = $root . '/vendor/bin/create-permission';
 // 1. Positional arguments with clear description.
 $positionalArgs = [
 	'className'   => 'PermissionProvider',
-	'namespace'   => 'App\\UI\\Backend\\Admin',
+	'namespace'   => 'App\\Presentation\\Backend\\Admin',
 	'resource'    => 'Backend:Admin',
-	'outputDir'   => 'app/UI/Backend/Admin',
+	'outputDir'   => 'app/Presentation/Backend/Admin',
 ];
 
 // 2. Optional switches (options).
@@ -200,14 +200,14 @@ The package already contains default configuration in:
 The bundled config already contains:
 
 - `permissionFactory` service registration
-- automatic `search` registration for `PermissionProvider` classes in `%appDir%/UI`
+- automatic `search` registration for `PermissionProvider` classes in `%appDir%/Presentation`
 
 Permission factory:
 ```neon
 services:
 	permissionFactory:
 		class: Drago\Permission\PermissionFactory
-		arguments: [tagged(PermisionTag)]
+		arguments: [tagged(PermissionTag)]
 
 	- @permissionFactory::create
 ```
@@ -216,17 +216,17 @@ Module provider:
 ```neon
 services:
 	signPermission:
-		class: App\UI\Sign\PermissionProvider
-		tags: [PermisionTag]
+		class: App\Presentation\Sign\PermissionProvider
+		tags: [PermissionTag]
 ```
 
 For larger applications with many providers, you can use the `search` section to register all matching classes automatically instead of listing each one individually:
 ```neon
 search:
 	permissions:
-		in: %appDir%/UI
+		in: %appDir%/Presentation
 		classes: [PermissionProvider]
-		tags: [PermisionTag]
+		tags: [PermissionTag]
 ```
 
 ## Presenter Authorization

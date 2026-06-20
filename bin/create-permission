@@ -333,11 +333,11 @@ Usage:
   create-permission <ClassName> <Namespace> [Resource] [OutputDir] [options]
 
 Examples:
-  create-permission PermissionProvider App\\UI\\Backend\\Sign Backend:Sign app/UI/Backend/Sign
+  create-permission PermissionProvider App\\Presentation\\Sign Sign app/Presentation/Sign
   create-permission PermissionProvider App\\Modules\\Sign\\Permission Backend:Sign app/Modules/Sign/Permission --allow-role=RoleAdmin
   create-permission PermissionProvider App\\Modules\\Front\\Permission Front:Dashboard app/Modules/Front/Permission --allow-role=RoleUser --allow-privilege=view
-  create-permission PermissionProvider App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
-  create-permission PermissionProvider App\\UI\\Backend\\Admin Backend:Admin app/UI/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
+  create-permission PermissionProvider App\\Presentation\\Backend\\Admin Backend:Admin app/Presentation/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
+  create-permission PermissionProvider App\\Presentation\\Backend\\Admin Backend:Admin app/Presentation/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
 
 Options:
   --allow-role=<RoleConstant>   Default: RoleGuest (example: RoleAdmin)

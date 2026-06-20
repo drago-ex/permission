@@ -1,12 +1,12 @@
 services:
 	permissionFactory:
 		class: Drago\Permission\PermissionFactory
-		arguments: [tagged(PermisionTag)]
+		arguments: [tagged(PermissionTag)]
 
 	- @permissionFactory::create
 
 search:
 	permissions:
-		in: %appDir%/UI
+		in: %appDir%/Presentation
 		classes: [PermissionProvider]
-		tags: [PermisionTag]
+		tags: [PermissionTag]
