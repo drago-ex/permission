@@ -61,7 +61,7 @@ trait Authorization
 
 		[$receiver, $name] = $signal;
 
-		if (is_string($receiver) && $receiver !== '') {
+		if ($receiver !== '') {
 			$group = explode('-', $receiver)[0];
 			$isReadOnlyReceiver = (bool) array_filter(
 				$this->readOnlyReceivers(),
@@ -75,6 +75,6 @@ trait Authorization
 			return "$group-write";
 		}
 
-		return is_string($name) ? $name : '';
+		return $name;
 	}
 }
