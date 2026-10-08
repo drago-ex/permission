@@ -23,7 +23,10 @@
 		"phpstan/phpstan-nette": "^2.0"
 	},
 	"autoload": {
-		"classmap": ["src/"]
+		"classmap": ["src/"],
+		"psr-4": {
+			"Drago\\": "src"
+		}
 	},
 	"bin": [
 		"bin/create-permission"
