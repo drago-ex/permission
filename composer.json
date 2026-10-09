@@ -1,7 +1,7 @@
 {
 	"name": "drago-ex/permission",
-	"type": "library",
 	"description": "Lightweight ACL and role management.",
+	"type": "library",
 	"license": ["MIT"],
 	"authors": [
 		{
@@ -28,9 +28,7 @@
 			"Drago\\": "src"
 		}
 	},
-	"bin": [
-		"bin/create-permission"
-	],
+	"bin": ["bin/create-permission"],
 	"scripts": {
 		"phpstan": "phpstan analyse",
 		"tester": "tester tests/cases -s"
