@@ -10,16 +10,19 @@ and automatic authorization checks in presenters.
 [![Coding Style](https://github.com/drago-ex/permission/actions/workflows/coding-style.yml/badge.svg)](https://github.com/drago-ex/permission/actions/workflows/coding-style.yml)
 
 ## Requirements
+
 - PHP >= 8.3
 - Nette Framework
 - Composer
 
 ## Installation
+
 ```bash
 composer require drago-ex/permission
 ```
 
 ## Features
+
 - Central ACL creation
 - Modular permission providers per module
 - Default roles: guest, user, admin
@@ -27,6 +30,7 @@ composer require drago-ex/permission
 - Action and signal based privileges
 
 ## Related Package: Dynamic Role Management
+
 For dynamic role and access management, use:
 
 - `drago-ex/project-permission`: https://github.com/drago-ex/project-permission
@@ -38,6 +42,7 @@ This package is built on top of `drago-ex/permission` and provides:
 - allowing or denying access per role
 
 ## Roles
+
 Default roles:
 
 - guest
@@ -47,12 +52,14 @@ Default roles:
 Roles are registered automatically.
 
 ## Permission Factory
+
 PermissionFactory creates a Nette\Security\Permission instance,
 registers default roles, and runs all registered permission providers.
 
 Providers are collected via DI tags.
 
 ## Permission Providers
+
 Each module registers its own permissions using a Provider implementation.
 
 Providers:
@@ -88,6 +95,7 @@ This registers the `Backend:Sign` resource and grants access to guests (unauthen
 which is the minimum required for the login page to be accessible.
 
 ## Permission Generator (CLI)
+
 The package provides a generator for module providers:
 
 ```bash
@@ -193,6 +201,7 @@ php bin/create-admin-permission
 ```
 
 ## DI Configuration
+
 The package already contains default configuration in:
 
 - `vendor/drago-ex/permission/src/Drago/Permission/conf.neon`
@@ -230,6 +239,7 @@ search:
 ```
 
 ## Presenter Authorization
+
 Authorization is handled by the `Authorization` trait.
 
 - runs automatically on presenter startup
