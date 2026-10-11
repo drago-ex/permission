@@ -10,20 +10,6 @@ use Nette\Security\User;
 
 trait Authorization
 {
-	/** @return list<string> */
-	protected function readOnlySignals(): array
-	{
-		return [];
-	}
-
-
-	/** @return list<string> */
-	protected function readOnlyReceivers(): array
-	{
-		return [];
-	}
-
-
 	/**
 	 * Registers an authorization check executed on presenter startup.
 	 * Redirects unauthenticated users to login, throws 403 for unauthorized access.
@@ -44,6 +30,20 @@ trait Authorization
 				}
 			}
 		};
+	}
+
+
+	/** @return list<string> */
+	protected function readOnlySignals(): array
+	{
+		return [];
+	}
+
+
+	/** @return list<string> */
+	protected function readOnlyReceivers(): array
+	{
+		return [];
 	}
 
 
