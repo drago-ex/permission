@@ -11,7 +11,7 @@ and automatic authorization checks in presenters.
 
 ## Requirements
 
-- PHP >= 8.3
+- PHP >= 8.3, < 9
 - Nette Framework
 - Composer
 
