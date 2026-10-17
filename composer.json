@@ -13,7 +13,7 @@
 		"php": ">=8.3 <9",
 		"nette/robot-loader": "^4.1",
 		"nette/security": "^3.1",
-		"nette/application": "^3.1",
+		"nette/application": "^3.2",
 		"nette/di": "^3.1"
 	},
 	"require-dev": {
@@ -35,6 +35,6 @@
 	],
 	"scripts": {
 		"phpstan": "phpstan analyse",
-		"tester": "tester tests/cases -s"
+		"tester": "tester tests/cases -s -C"
 	}
 }

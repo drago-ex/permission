@@ -56,7 +56,7 @@ final class TestPresenter extends Presenter
 	}
 
 
-	public function flashMessage(string|stdClass|Stringable $message, string $type = 'info'): stdClass
+	public function flashMessage($message, string $type = 'info'): stdClass
 	{
 		return (object) ['message' => $message, 'type' => $type];
 	}
@@ -126,7 +126,7 @@ function createPresenter(?IIdentity $identity): TestPresenter
 	$acl->allow(Role::RoleUser, 'Admin', 'default-read');
 
 	$presenter = new TestPresenter;
-	$user = new User(new TestUserStorage($identity), authorizator: $acl);
+	$user = new User(storage: new TestUserStorage($identity), authorizator: $acl);
 	$presenter->injectAuthorization($presenter, $user);
 	return $presenter;
 }
