@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 use Drago\Permission\Authorization;
 
-/** PHPStan trait usage stub. */
+
+/** Lets PHPStan analyse the Authorization trait, which no class in the package uses. */
 class TraitStub
 {
 	use Authorization;
