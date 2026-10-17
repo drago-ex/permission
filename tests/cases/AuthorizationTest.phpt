@@ -33,7 +33,13 @@ final class TestPresenter extends Presenter
 	private array $receivers = [];
 
 
-	public function configure(string $action, ?string $receiver, ?string $signal, array $signals = [], array $receivers = []): void
+	public function configure(
+		string $action,
+		?string $receiver,
+		?string $signal,
+		array $signals = [],
+		array $receivers = [],
+	): void
 	{
 		$reflection = new ReflectionClass(Presenter::class);
 		$reflection->getProperty('action')->setValue($this, $action);
