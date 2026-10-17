@@ -244,7 +244,7 @@ final readonly class CreatePermissionCommand
 
 	private function resolveOutputDir(string $outputDirArg): string
 	{
-		if (str_starts_with($outputDirArg, DIRECTORY_SEPARATOR)) {
+		if (str_starts_with($outputDirArg, '/') || preg_match('~^[A-Za-z]:[\\\\/]~', $outputDirArg)) {
 			return $outputDirArg;
 		}
 

@@ -202,11 +202,15 @@ php bin/create-admin-permission
 
 ## DI Configuration
 
-The package already contains default configuration in:
+The package contains a ready configuration in `vendor/drago-ex/permission/src/Permission/conf.neon`.
+It is not loaded automatically; include it in your configuration, or copy its content:
 
-- `vendor/drago-ex/permission/src/Drago/Permission/conf.neon`
+```neon
+includes:
+	- ../vendor/drago-ex/permission/src/Permission/conf.neon
+```
 
-The bundled config already contains:
+The `search` section needs `nette/robot-loader`, which this package requires. The bundled config contains:
 
 - `permissionFactory` service registration
 - automatic `search` registration for `PermissionProvider` classes in `%appDir%/Presentation`
@@ -259,8 +263,9 @@ class BasePresenter extends Nette\Application\UI\Presenter
 All presenters extending `BasePresenter` will then have automatic authorization checks applied.
 
 Unauthorized access:
-- not logged in redirect to Sign:in
-- logged in but forbidden HTTP 403
+- not logged in: redirect to `:Sign:in` with a backlink (override `signInDestination()` to change the target)
+- logged in but forbidden: HTTP 403
+- a presenter without a registered ACL resource is denied the same way, so forgetting a provider never opens a page
 
 ### Privilege resolution
 

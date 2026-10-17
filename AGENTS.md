@@ -17,6 +17,12 @@ Use this file as package-specific guidance when working in this repository. Keep
 - `.github/`: CI workflows; keep their PHP versions and commands consistent with Composer and the package scripts.
 - `composer.json`: package metadata, dependency constraints, autoloading, and available Composer scripts.
 
+## Key Parts
+- `PermissionFactory` builds the ACL with the guest, user and admin roles and runs tagged `Provider` services.
+- `Authorization` trait checks the presenter name with the resolved privilege on startup; a presenter without a registered resource is denied. Guests are redirected to `signInDestination()` (`:Sign:in`).
+- `src/Permission/conf.neon` is not loaded automatically; its `search` section needs `nette/robot-loader`, which is therefore a runtime dependency.
+- `bin/create-permission` generates providers; it is tested through the CLI in `tests/cases/CreatePermissionCommandTest.phpt`.
+
 ## Dependencies
 
 Composer constraints describe the package contract. Before changing integration behavior, inspect the source and the actual call sites in this package; do not infer runtime usage solely from dependency declarations.
