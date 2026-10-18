@@ -120,9 +120,9 @@ function createProject(array $packages): string
 	$versions = [];
 	foreach ($packages as $name => $files) {
 		$path = "$root/vendor/$name";
-		mkdir($path, 0777, true);
+		mkdir($path, 0o777, true);
 		foreach ($files as $file => $content) {
-			@mkdir(dirname("$path/$file"), 0777, true);
+			@mkdir(dirname("$path/$file"), 0o777, true);
 			file_put_contents("$path/$file", $content);
 		}
 		$versions[$name] = [
@@ -150,7 +150,7 @@ function createProject(array $packages): string
 		'versions' => $versions,
 	];
 	file_put_contents("$root/vendor/autoload.php", sprintf(
-		"<?php\nrequire %s;\nComposer\InstalledVersions::reload(%s);\n",
+		"<?php\nrequire %s;\nComposer\\InstalledVersions::reload(%s);\n",
 		var_export(dirname(__DIR__, 2) . '/vendor/autoload.php', true),
 		var_export($installed, true),
 	));
