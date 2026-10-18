@@ -255,9 +255,11 @@ test('Existing providers are skipped and reported unless --force is given', func
 	$file = "$root/app/Presentation/Sign/PermissionProvider.php";
 	file_put_contents($file, '<?php // edited');
 
-	[$code] = runInProject($root, '--packages');
+	[$code, $output, $error] = runInProject($root, '--packages');
 	Assert::same(0, $code);
 	Assert::same('<?php // edited', file_get_contents($file));
+	Assert::contains('1 existing providers kept', $output);
+	Assert::notContains('File already exists', $error);
 	Assert::same(['generated' => 0, 'skipped' => 1, 'error' => 0], readReport($root)['stats']);
 
 	[$code] = runInProject($root, '--packages', '--force');

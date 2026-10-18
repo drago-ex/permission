@@ -73,10 +73,9 @@ final readonly class CreatePermissionCommand
 		$entries = [];
 		$stats = ['generated' => 0, 'skipped' => 0, 'error' => 0];
 		foreach ($this->packageDefinitions() as $package) {
-			$this->info("Package {$package['name']}");
 			$entry = ['package' => $package['name'], 'version' => $package['version']];
 			if (is_string($package['definitions'])) {
-				$this->error($package['definitions']);
+				$this->error("{$package['name']}: {$package['definitions']}");
 				$entries[] = $entry + ['action' => 'error', 'message' => $package['definitions']];
 				$stats['error']++;
 				continue;
@@ -87,13 +86,14 @@ final readonly class CreatePermissionCommand
 					$input = $this->definitionInput($definition, $force);
 				} catch (InvalidArgumentException $e) {
 					$message = "Definition #$i: {$e->getMessage()}";
-					$this->error($message);
+					$this->error("{$package['name']}: $message");
 					$entries[] = $entry + ['action' => 'error', 'message' => $message];
 					$stats['error']++;
 					continue;
 				}
 
-				[$action, $message] = $this->generate($input);
+				// Runs on every composer update in Netis projects, so existing classes are summarized below.
+				[$action, $message] = $this->generate($input, warnExisting: false);
 				$entries[] = $entry + array_filter([
 					'action' => $action,
 					'class' => $input->namespaceName . '\\' . $input->className,
@@ -106,6 +106,8 @@ final readonly class CreatePermissionCommand
 
 		if ($entries === []) {
 			$this->warning('No permission providers found in the installed packages.');
+		} elseif ($stats['skipped'] > 0) {
+			$this->info("{$stats['skipped']} existing providers kept (use --force to overwrite them).");
 		}
 
 		$this->writeReport($force, $stats, $entries);
@@ -219,10 +221,12 @@ final readonly class CreatePermissionCommand
 	 * Writes the provider class unless it exists (without --force).
 	 * @return array{'generated'|'skipped'|'error', ?string} action and error message
 	 */
-	private function generate(Input $input): array
+	private function generate(Input $input, bool $warnExisting = true): array
 	{
 		if ($input->force === false && is_file($input->outputFile)) {
-			$this->warning("File already exists: {$input->outputFile}");
+			if ($warnExisting) {
+				$this->warning("File already exists: {$input->outputFile}");
+			}
 			return ['skipped', null];
 		}
 
