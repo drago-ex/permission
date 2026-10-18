@@ -7,7 +7,7 @@ Use this file as package-specific guidance when working in this repository. Keep
 - **Type**: library
 - **Purpose**: Lightweight ACL and role management.
 - **PHP**: >=8.3 <9
-- **Runtime dependencies**: nette/robot-loader (^4.1), nette/security (^3.1), nette/application (^3.1), nette/di (^3.1)
+- **Runtime dependencies**: nette/robot-loader (^4.1), nette/security (^3.1), nette/application (^3.2), nette/di (^3.1)
 - **License**: MIT
 
 ## Repository Layout

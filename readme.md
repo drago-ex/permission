@@ -157,8 +157,7 @@ public function register(Permission $acl): void
 
 ### Providers Declared by Packages
 
-A package that needs basic access rules declares them instead of shipping its own script.
-In its `composer.json`, `extra.drago-permission` points to a PHP file in the package:
+A package declares its providers in `composer.json`:
 
 ```json
 "extra": {
@@ -166,71 +165,28 @@ In its `composer.json`, `extra.drago-permission` points to a PHP file in the pac
 }
 ```
 
-The file returns a list of provider definitions. The keys are the same as the arguments and options above:
+The file returns a list of definitions with the same values as the options above
+(`className`, `namespace`, `resource`, `outputDir`, `allow`, `allowRole`, `allowPrivilege`, `addResource`, `allowWithResource`):
 
 ```php
-<?php
-
-declare(strict_types=1);
-
 return [
 	[
 		'className' => 'PermissionProvider',
-		'namespace' => 'App\Presentation\Backend\Admin',
-		'resource' => 'Backend:Admin',
-		'outputDir' => 'app/Presentation/Backend/Admin',
-		'allow' => [
-			'RoleAdmin',
-			'RoleUser,self::Resource,default',
-		],
+		'namespace' => 'App\Presentation\Sign',
+		'resource' => 'Sign',
+		'outputDir' => 'app/Presentation/Sign',
+		'allow' => ['RoleGuest,self::Resource'],
 	],
 ];
 ```
 
-| Key                 | Option                  | Default     |
-|---------------------|-------------------------|-------------|
-| `className`         | `<ClassName>`           | required    |
-| `namespace`         | `<Namespace>`           | required    |
-| `resource`          | `[Resource]`            | required    |
-| `outputDir`         | `[OutputDir]`           | required    |
-| `allow`             | `--allow` (list)        | none        |
-| `allowRole`         | `--allow-role`          | `RoleGuest` |
-| `allowPrivilege`    | `--allow-privilege`     | none        |
-| `addResource`       | `--add-resource`        | `true`      |
-| `allowWithResource` | `--allow-with-resource` | `true`      |
-
-Generate the providers of all installed packages, in the project root:
+Generate the providers of all installed packages:
 
 ```bash
 vendor/bin/create-permission --packages
 ```
 
-The command finds the packages through Composer; no other package is needed. Existing classes are kept,
-because a generated class belongs to the project; add `--force` to overwrite them. An unknown key or an invalid
-value is reported for its definition and the other packages are still generated.
-
-Each run writes a report to `.drago-project/permission.json`:
-
-```json
-{
-	"tool": "permission",
-	"command": "create-permission --packages",
-	"date": "2026-10-18T14:05:12+02:00",
-	"result": "ok",
-	"stats": { "generated": 1, "skipped": 0, "error": 0 },
-	"entries": [
-		{
-			"package": "drago-ex/project-auth",
-			"version": "v2.6.0",
-			"action": "generated",
-			"class": "App\\Presentation\\Sign\\PermissionProvider",
-			"file": "app/Presentation/Sign/PermissionProvider.php"
-		}
-	]
-}
-```
-
-The action is `generated`, `skipped` (the class already exists) or `error` with a `message`.
+Existing classes are kept, `--force` overwrites them. The result is written to `.drago-project/permission.json`.
 
 ## DI Configuration
 
