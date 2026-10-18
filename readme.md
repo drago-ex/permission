@@ -155,50 +155,82 @@ public function register(Permission $acl): void
 }
 ```
 
-### Module Wrapper Scripts
+### Providers Declared by Packages
 
-For one-command generation per module, add a local wrapper script in your app, e.g. `bin/create-admin-permission`.
-The class can keep the same `PermissionProvider` name in each module because every module has its own namespace:
+A package that needs basic access rules declares them instead of shipping its own script.
+In its `composer.json`, `extra.drago-permission` points to a PHP file in the package:
+
+```json
+"extra": {
+	"drago-permission": "permission.php"
+}
+```
+
+The file returns a list of provider definitions. The keys are the same as the arguments and options above:
 
 ```php
-#!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
-$root = dirname(__DIR__);
-$script = $root . '/vendor/bin/create-permission';
-
-// 1. Positional arguments with clear description.
-$positionalArgs = [
-	'className'   => 'PermissionProvider',
-	'namespace'   => 'App\\Presentation\\Backend\\Admin',
-	'resource'    => 'Backend:Admin',
-	'outputDir'   => 'app/Presentation/Backend/Admin',
+return [
+	[
+		'className' => 'PermissionProvider',
+		'namespace' => 'App\Presentation\Backend\Admin',
+		'resource' => 'Backend:Admin',
+		'outputDir' => 'app/Presentation/Backend/Admin',
+		'allow' => [
+			'RoleAdmin',
+			'RoleUser,self::Resource,default',
+		],
+	],
 ];
-
-// 2. Optional switches (options).
-$options = [
-	'--allow=RoleAdmin',
-	'--allow=RoleUser,self::Resource,default',
-];
-
-// We will combine them into one flat field for the shell.
-$args = array_merge(array_values($positionalArgs), $options);
-
-$command = 'php ' . escapeshellarg($script);
-foreach ($args as $arg) {
-	$command .= ' ' . escapeshellarg($arg);
-}
-
-passthru($command, $exitCode);
-exit($exitCode);
 ```
 
-Run:
+| Key                 | Option                  | Default     |
+|---------------------|-------------------------|-------------|
+| `className`         | `<ClassName>`           | required    |
+| `namespace`         | `<Namespace>`           | required    |
+| `resource`          | `[Resource]`            | required    |
+| `outputDir`         | `[OutputDir]`           | required    |
+| `allow`             | `--allow` (list)        | none        |
+| `allowRole`         | `--allow-role`          | `RoleGuest` |
+| `allowPrivilege`    | `--allow-privilege`     | none        |
+| `addResource`       | `--add-resource`        | `true`      |
+| `allowWithResource` | `--allow-with-resource` | `true`      |
+
+Generate the providers of all installed packages, in the project root:
 
 ```bash
-php bin/create-admin-permission
+vendor/bin/create-permission --packages
 ```
+
+The command finds the packages through Composer; no other package is needed. Existing classes are kept,
+because a generated class belongs to the project; add `--force` to overwrite them. An unknown key or an invalid
+value is reported for its definition and the other packages are still generated.
+
+Each run writes a report to `.drago-project/permission.json`:
+
+```json
+{
+	"tool": "permission",
+	"command": "create-permission --packages",
+	"date": "2026-10-18T14:05:12+02:00",
+	"result": "ok",
+	"stats": { "generated": 1, "skipped": 0, "error": 0 },
+	"entries": [
+		{
+			"package": "drago-ex/project-auth",
+			"version": "v2.6.0",
+			"action": "generated",
+			"class": "App\\Presentation\\Sign\\PermissionProvider",
+			"file": "app/Presentation/Sign/PermissionProvider.php"
+		}
+	]
+}
+```
+
+The action is `generated`, `skipped` (the class already exists) or `error` with a `message`.
 
 ## DI Configuration
 

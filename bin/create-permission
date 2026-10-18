@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use Composer\InstalledVersions;
 use Nette\PhpGenerator\PhpFile;
 use Nette\PhpGenerator\PsrPrinter;
 
@@ -13,6 +14,15 @@ final readonly class CreatePermissionCommand
 	private const Yellow = "\033[33m";
 	private const Red = "\033[31m";
 	private const Reset = "\033[0m";
+
+	/** Report of the last --packages run, relative to the project root. */
+	private const ReportFile = '.drago-project/permission.json';
+
+	/** Keys of a provider definition in permission.php; the first four are required. */
+	private const DefinitionKeys = [
+		'className', 'namespace', 'resource', 'outputDir',
+		'allow', 'allowRole', 'allowPrivilege', 'addResource', 'allowWithResource',
+	];
 
 	public function __construct(
 		private string $root,
@@ -30,23 +40,194 @@ final readonly class CreatePermissionCommand
 		}
 
 		['positionals' => $positionals, 'options' => $options] = $this->parseArgs($arguments);
+		$force = array_key_exists('force', $options);
+		if (array_key_exists('packages', $options)) {
+			if ($positionals !== [] || array_diff(array_keys($options), ['packages', 'force']) !== []) {
+				$this->error('Use either arguments or --packages, not both.');
+				return 1;
+			}
+			return $this->runPackages($force);
+		}
+
 		if (count($positionals) < 2 || count($positionals) > 4) {
 			$this->error('Invalid arguments. Run with --help.');
 			return 1;
 		}
 
-		$input = $this->buildInput($positionals, $options);
-		if ($input === null) {
+		try {
+			$input = $this->buildInput($positionals, $options);
+		} catch (InvalidArgumentException $e) {
+			$this->error($e->getMessage());
 			return 1;
 		}
 
+		return $this->generate($input)[0] === 'error' ? 1 : 0;
+	}
+
+	/**
+	 * Generates the providers that installed packages declare in extra.drago-permission
+	 * (a PHP file returning a list of definitions) and writes a report of the run.
+	 */
+	private function runPackages(bool $force): int
+	{
+		$entries = [];
+		$stats = ['generated' => 0, 'skipped' => 0, 'error' => 0];
+		foreach ($this->packageDefinitions() as $package) {
+			$this->info("Package {$package['name']}");
+			$entry = ['package' => $package['name'], 'version' => $package['version']];
+			if (is_string($package['definitions'])) {
+				$this->error($package['definitions']);
+				$entries[] = $entry + ['action' => 'error', 'message' => $package['definitions']];
+				$stats['error']++;
+				continue;
+			}
+
+			foreach ($package['definitions'] as $i => $definition) {
+				try {
+					$input = $this->definitionInput($definition, $force);
+				} catch (InvalidArgumentException $e) {
+					$message = "Definition #$i: {$e->getMessage()}";
+					$this->error($message);
+					$entries[] = $entry + ['action' => 'error', 'message' => $message];
+					$stats['error']++;
+					continue;
+				}
+
+				[$action, $message] = $this->generate($input);
+				$entries[] = $entry + array_filter([
+					'action' => $action,
+					'class' => $input->namespaceName . '\\' . $input->className,
+					'file' => $this->relativePath($input->outputFile),
+					'message' => $message,
+				], fn(?string $value): bool => $value !== null);
+				$stats[$action]++;
+			}
+		}
+
+		if ($entries === []) {
+			$this->warning('No permission providers found in the installed packages.');
+		}
+
+		$this->writeReport($force, $stats, $entries);
+		return $stats['error'] > 0 ? 1 : 0;
+	}
+
+	/**
+	 * Installed packages with extra.drago-permission, sorted by name; definitions is an error message
+	 * when the file cannot be used.
+	 * @return list<array{name: string, version: ?string, definitions: list<mixed>|string}>
+	 */
+	private function packageDefinitions(): array
+	{
+		$packages = [];
+		$root = realpath($this->root);
+		foreach (InstalledVersions::getInstalledPackages() as $name) {
+			$path = InstalledVersions::getInstallPath($name);
+			$path = $path !== null ? realpath($path) : false;
+
+			// The project itself is the root package; its own providers are written by hand.
+			if ($path === false || $path === $root || !is_file("$path/composer.json")) {
+				continue;
+			}
+
+			$composer = json_decode((string) file_get_contents("$path/composer.json"), true);
+			$file = is_array($composer) ? ($composer['extra']['drago-permission'] ?? null) : null;
+			if ($file === null) {
+				continue;
+			}
+
+			$packages[$name] = [
+				'name' => $name,
+				'version' => InstalledVersions::getPrettyVersion($name),
+				'definitions' => $this->loadDefinitions($path, $file),
+			];
+		}
+
+		ksort($packages);
+		return array_values($packages);
+	}
+
+	/** @return list<mixed>|string the definitions, or an error message */
+	private function loadDefinitions(string $packagePath, mixed $file): array|string
+	{
+		if (!is_string($file) || $file === '') {
+			return 'extra.drago-permission must be a path to a PHP file.';
+		}
+
+		$path = $packagePath . DIRECTORY_SEPARATOR . $file;
+		if (!is_file($path)) {
+			return "Permission file not found: $file";
+		}
+
+		$definitions = (static fn(): mixed => require $path)();
+		return is_array($definitions) && array_is_list($definitions)
+			? $definitions
+			: "$file must return a list of provider definitions.";
+	}
+
+	/** Converts a definition from permission.php to the same input the command-line arguments give. */
+	private function definitionInput(mixed $definition, bool $force): Input
+	{
+		if (!is_array($definition)) {
+			throw new InvalidArgumentException('A definition must be an array.');
+		}
+
+		$unknown = array_diff(array_keys($definition), self::DefinitionKeys);
+		if ($unknown !== []) {
+			throw new InvalidArgumentException('Unknown key ' . implode(', ', $unknown) . '.');
+		}
+
+		$positionals = [];
+		foreach (['className', 'namespace', 'resource', 'outputDir'] as $key) {
+			if (!is_string($definition[$key] ?? null) || $definition[$key] === '') {
+				throw new InvalidArgumentException("Missing '$key'.");
+			}
+			$positionals[] = $definition[$key];
+		}
+
+		$options = $force ? ['force' => true] : [];
+		foreach (['allowRole' => 'allow-role', 'allowPrivilege' => 'allow-privilege'] as $key => $option) {
+			if (isset($definition[$key])) {
+				if (!is_string($definition[$key])) {
+					throw new InvalidArgumentException("'$key' must be a string.");
+				}
+				$options[$option] = $definition[$key];
+			}
+		}
+
+		foreach (['addResource' => 'add-resource', 'allowWithResource' => 'allow-with-resource'] as $key => $option) {
+			if (isset($definition[$key])) {
+				if (!is_bool($definition[$key])) {
+					throw new InvalidArgumentException("'$key' must be true or false.");
+				}
+				$options[$option] = $definition[$key] ? '1' : '0';
+			}
+		}
+
+		if (isset($definition['allow'])) {
+			$allow = $definition['allow'];
+			if (!is_array($allow) || !array_is_list($allow) || array_filter($allow, 'is_string') !== $allow) {
+				throw new InvalidArgumentException("'allow' must be a list of rules like 'RoleUser,self::Resource,default'.");
+			}
+			$options['allow'] = $allow;
+		}
+
+		return $this->buildInput($positionals, $options);
+	}
+
+	/**
+	 * Writes the provider class unless it exists (without --force).
+	 * @return array{'generated'|'skipped'|'error', ?string} action and error message
+	 */
+	private function generate(Input $input): array
+	{
 		if ($input->force === false && is_file($input->outputFile)) {
 			$this->warning("File already exists: {$input->outputFile}");
-			return 0;
+			return ['skipped', null];
 		}
 
 		if ($this->ensureDirectory($input->outputDir) === false) {
-			return 1;
+			return ['error', "Could not create directory: {$this->relativePath($input->outputDir)}"];
 		}
 
 		$this->info("Generating {$input->className}...");
@@ -54,11 +235,43 @@ final readonly class CreatePermissionCommand
 
 		if (file_put_contents($input->outputFile, $content) === false) {
 			$this->error("Failed to write file: {$input->outputFile}");
-			return 1;
+			return ['error', "Failed to write file: {$this->relativePath($input->outputFile)}"];
 		}
 
 		$this->success("Permission provider created: {$input->outputFile}");
-		return 0;
+		return ['generated', null];
+	}
+
+	/**
+	 * @param array<string, int> $stats
+	 * @param list<array<string, ?string>> $entries
+	 */
+	private function writeReport(bool $force, array $stats, array $entries): void
+	{
+		$data = [
+			'tool' => 'permission',
+			'command' => 'create-permission --packages' . ($force ? ' --force' : ''),
+			'date' => date('c'),
+			'result' => $stats['error'] > 0 ? 'error' : 'ok',
+			'stats' => $stats,
+			'entries' => $entries,
+		];
+
+		$path = $this->root . DIRECTORY_SEPARATOR . self::ReportFile;
+		$json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+		if ($json === false || !$this->ensureDirectory(dirname($path)) || file_put_contents($path, $json . "\n") === false) {
+			$this->warning('Cannot write report: ' . self::ReportFile);
+			return;
+		}
+
+		$this->info('Report: ' . self::ReportFile);
+	}
+
+	private function relativePath(string $path): string
+	{
+		$root = rtrim(str_replace('\\', '/', $this->root), '/') . '/';
+		$path = str_replace('\\', '/', $path);
+		return str_starts_with($path, $root) ? substr($path, strlen($root)) : $path;
 	}
 
 	/**
@@ -101,7 +314,7 @@ final readonly class CreatePermissionCommand
 	 * @param list<string> $positionals
 	 * @param array<string, string|bool|list<string>> $options
 	 */
-	private function buildInput(array $positionals, array $options): ?Input
+	private function buildInput(array $positionals, array $options): Input
 	{
 		$className = $positionals[0];
 		$namespaceName = $positionals[1];
@@ -116,21 +329,17 @@ final readonly class CreatePermissionCommand
 		$force = array_key_exists('force', $options);
 
 		if ($this->isValidClassName($className) === false) {
-			$this->error("Invalid class name '$className'.");
-			return null;
+			throw new InvalidArgumentException("Invalid class name '$className'.");
 		}
 		if ($this->isValidNamespace($namespaceName) === false) {
-			$this->error("Invalid namespace '$namespaceName'.");
-			return null;
+			throw new InvalidArgumentException("Invalid namespace '$namespaceName'.");
 		}
 		if ($this->isValidRoleConstant($allowRole) === false) {
-			$this->error("Invalid --allow-role '$allowRole'.");
-			return null;
+			throw new InvalidArgumentException("Invalid allow role '$allowRole'.");
 		}
 		foreach ($allowRules as $rule) {
 			if ($this->isValidRoleConstant($rule->role) === false) {
-				$this->error("Invalid --allow role '{$rule->role}'.");
-				return null;
+				throw new InvalidArgumentException("Invalid allow role '{$rule->role}'.");
 			}
 		}
 
@@ -331,6 +540,13 @@ INFO Generate a permission provider class.
 
 Usage:
   create-permission <ClassName> <Namespace> [Resource] [OutputDir] [options]
+  create-permission --packages [--force]
+
+With --packages, the providers declared by installed packages are generated: extra.drago-permission
+in a package's composer.json points to a PHP file returning a list of definitions with the keys
+className, namespace, resource, outputDir, and optionally allow, allowRole, allowPrivilege,
+addResource and allowWithResource (the same as the options below). A report of the run is written
+to .drago-project/permission.json.
 
 Examples:
   create-permission PermissionProvider App\\Presentation\\Sign Sign app/Presentation/Sign
@@ -346,6 +562,7 @@ Options:
   --allow-with-resource=<0|1>   Default: 1, whether allow() includes self::Resource
   --allow=<rule>                Repeatable. Format: Role | Role,resource | Role,resource,privilege
   --force                       Overwrite existing file
+  --packages                    Generate the providers declared by installed packages
 
 USAGE;
 	}

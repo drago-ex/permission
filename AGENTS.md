@@ -22,6 +22,7 @@ Use this file as package-specific guidance when working in this repository. Keep
 - `Authorization` trait checks the presenter name with the resolved privilege on startup; a presenter without a registered resource is denied. Guests are redirected to `signInDestination()` (`:Sign:in`).
 - `src/Permission/conf.neon` is not loaded automatically; its `search` section needs `nette/robot-loader`, which is therefore a runtime dependency.
 - `bin/create-permission` generates providers; it is tested through the CLI in `tests/cases/CreatePermissionCommandTest.phpt`.
+- `create-permission --packages` generates the providers that installed packages declare in `extra.drago-permission` (a PHP file returning definitions whose keys mirror the CLI options) and writes `.drago-project/permission.json`. It finds packages via `Composer\InstalledVersions`, so it does not depend on `drago-ex/project-tools`. Tests fake the installed packages with `InstalledVersions::reload()` in a generated `vendor/autoload.php`.
 
 ## Dependencies
 
