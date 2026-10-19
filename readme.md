@@ -155,58 +155,50 @@ public function register(Permission $acl): void
 }
 ```
 
-### Module Wrapper Scripts
+### Providers Declared by Packages
 
-For one-command generation per module, add a local wrapper script in your app, e.g. `bin/create-admin-permission`.
-The class can keep the same `PermissionProvider` name in each module because every module has its own namespace:
+A package declares its providers in `composer.json`:
+
+```json
+"extra": {
+	"drago-permission": "permission.php"
+}
+```
+
+The file returns a list of definitions with the same values as the options above
+(`className`, `namespace`, `resource`, `outputDir`, `allow`, `allowRole`, `allowPrivilege`, `addResource`, `allowWithResource`):
 
 ```php
-#!/usr/bin/env php
-<?php
-declare(strict_types=1);
-
-$root = dirname(__DIR__);
-$script = $root . '/vendor/bin/create-permission';
-
-// 1. Positional arguments with clear description.
-$positionalArgs = [
-	'className'   => 'PermissionProvider',
-	'namespace'   => 'App\\Presentation\\Backend\\Admin',
-	'resource'    => 'Backend:Admin',
-	'outputDir'   => 'app/Presentation/Backend/Admin',
+return [
+	[
+		'className' => 'PermissionProvider',
+		'namespace' => 'App\Presentation\Sign',
+		'resource' => 'Sign',
+		'outputDir' => 'app/Presentation/Sign',
+		'allow' => ['RoleGuest,self::Resource'],
+	],
 ];
-
-// 2. Optional switches (options).
-$options = [
-	'--allow=RoleAdmin',
-	'--allow=RoleUser,self::Resource,default',
-];
-
-// We will combine them into one flat field for the shell.
-$args = array_merge(array_values($positionalArgs), $options);
-
-$command = 'php ' . escapeshellarg($script);
-foreach ($args as $arg) {
-	$command .= ' ' . escapeshellarg($arg);
-}
-
-passthru($command, $exitCode);
-exit($exitCode);
 ```
 
-Run:
+Generate the providers of all installed packages:
 
 ```bash
-php bin/create-admin-permission
+vendor/bin/create-permission --packages
 ```
+
+Existing classes are kept, `--force` overwrites them. The result is written to `.drago-project/permission.json`.
 
 ## DI Configuration
 
-The package already contains default configuration in:
+The package contains a ready configuration in `vendor/drago-ex/permission/src/Permission/conf.neon`.
+It is not loaded automatically; include it in your configuration, or copy its content:
 
-- `vendor/drago-ex/permission/src/Drago/Permission/conf.neon`
+```neon
+includes:
+	- ../vendor/drago-ex/permission/src/Permission/conf.neon
+```
 
-The bundled config already contains:
+The `search` section needs `nette/robot-loader`, which this package requires. The bundled config contains:
 
 - `permissionFactory` service registration
 - automatic `search` registration for `PermissionProvider` classes in `%appDir%/Presentation`
@@ -259,8 +251,9 @@ class BasePresenter extends Nette\Application\UI\Presenter
 All presenters extending `BasePresenter` will then have automatic authorization checks applied.
 
 Unauthorized access:
-- not logged in redirect to Sign:in
-- logged in but forbidden HTTP 403
+- not logged in: redirect to `:Sign:in` with a backlink (override `signInDestination()` to change the target)
+- logged in but forbidden: HTTP 403
+- a presenter without a registered ACL resource is denied the same way, so forgetting a provider never opens a page
 
 ### Privilege resolution
 

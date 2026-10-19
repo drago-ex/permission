@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drago\Permission;
 
 use Nette\Application\UI\Presenter;
+use Nette\InvalidStateException;
 use Nette\Security\User;
 
 
@@ -19,10 +20,10 @@ trait Authorization
 		$presenter->onStartup[] = function () use ($presenter, $user) {
 			$resource = $this->resolveAclResource($presenter);
 
-			if (!$user->isAllowed($presenter->getName(), $resource)) {
+			if (!$this->isAclAllowed($user, (string) $presenter->getName(), $resource)) {
 				if (!$user->isLoggedIn()) {
 					$presenter->flashMessage('You must be logged in.');
-					$presenter->redirect(':Sign:in', [
+					$presenter->redirect($this->signInDestination(), [
 						'backlink' => $presenter->storeRequest(),
 					]);
 				} else {
@@ -30,6 +31,13 @@ trait Authorization
 				}
 			}
 		};
+	}
+
+
+	/** Presenter the guests are redirected to. */
+	protected function signInDestination(): string
+	{
+		return ':Sign:in';
 	}
 
 
@@ -76,5 +84,18 @@ trait Authorization
 		}
 
 		return $name;
+	}
+
+
+	/**
+	 * A presenter without a registered ACL resource is denied, instead of failing with an exception.
+	 */
+	private function isAclAllowed(User $user, string $resource, string $privilege): bool
+	{
+		try {
+			return $user->isAllowed($resource, $privilege);
+		} catch (InvalidStateException) {
+			return false;
+		}
 	}
 }
