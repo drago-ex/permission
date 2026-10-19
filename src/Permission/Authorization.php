@@ -71,19 +71,28 @@ trait Authorization
 
 		if ($receiver !== '') {
 			$group = explode('-', $receiver)[0];
-			$isReadOnlyReceiver = (bool) array_filter(
-				$this->readOnlyReceivers(),
-				fn(string $r) => str_contains($receiver, $r),
-			);
-
-			if ($isReadOnlyReceiver || in_array($name, $this->readOnlySignals(), true)) {
-				return "$group-read";
-			}
-
-			return "$group-write";
+			return $this->isReadOnlySignal($receiver, $name)
+				? "$group-read"
+				: "$group-write";
 		}
 
 		return $name;
+	}
+
+
+	/**
+	 * Decides whether a component signal only reads data. By default by readOnlySignals()
+	 * and readOnlyReceivers(); override it to ask a component, e.g. DataGrid::isReadOnlySignal().
+	 */
+	protected function isReadOnlySignal(string $receiver, string $name): bool
+	{
+		foreach ($this->readOnlyReceivers() as $mask) {
+			if (str_contains($receiver, $mask)) {
+				return true;
+			}
+		}
+
+		return in_array($name, $this->readOnlySignals(), true);
 	}
 
 

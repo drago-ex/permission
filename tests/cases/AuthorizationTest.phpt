@@ -20,7 +20,7 @@ use Tester\Assert;
 require __DIR__ . '/../bootstrap.php';
 
 
-final class TestPresenter extends Presenter
+class TestPresenter extends Presenter
 {
 	use Authorization;
 
@@ -187,4 +187,20 @@ test('A presenter without a registered ACL resource is denied, not a server erro
 	$presenter = createPresenter(null);
 	startup($presenter, 'Unregistered', 'default');
 	Assert::same(':Sign:in', $presenter->redirectedTo[0]);
+});
+
+
+test('A presenter can decide about read-only signals itself', function () {
+	$presenter = new class extends TestPresenter {
+		protected function isReadOnlySignal(string $receiver, string $name): bool
+		{
+			return str_ends_with($receiver, '-paginator');
+		}
+	};
+
+	$presenter->configure('default', 'articles-dataGrid-paginator', 'page');
+	Assert::same('articles-read', $presenter->resolve());
+
+	$presenter->configure('default', 'articles-dataGrid', 'action');
+	Assert::same('articles-write', $presenter->resolve());
 });

@@ -361,6 +361,24 @@ roles-dataGrid:action
 
 Use broad receiver masks only when the whole component is read-only.
 
+### Deciding in code
+
+For more than name lists, override `isReadOnlySignal()`. It receives the receiver path and the signal
+name and replaces both lists. Drago DataGrid knows its own read-only signals (sorting, filters, paging,
+page size), so a presenter with grids can simply ask it:
+
+```php
+use Drago\Datagrid\DataGrid;
+
+protected function isReadOnlySignal(string $receiver, string $name): bool
+{
+	return DataGrid::isReadOnlySignal($receiver, $name);
+}
+```
+
+This does not depend on the name of the grid component; row actions (`roles-dataGrid:action`)
+stay `roles-write`.
+
 ### Full example
 
 ```php
