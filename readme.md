@@ -30,6 +30,7 @@ composer require drago-ex/permission
 - Default roles: guest, user, admin
 - Automatic presenter authorization
 - Action and signal based privileges
+- Role switch panel for Tracy
 
 ## Related Package: Dynamic Role Management
 
@@ -442,3 +443,18 @@ $grid->addActionEdit(fn(int $id) => $this->handleEdit($id))
 ```
 
 Hiding a button is only for comfort; the signal itself is still checked by the `Authorization` trait.
+
+## Role Switch in Tracy
+
+While developing, the Tracy bar can switch the roles of the signed-in user, so you can try the application as
+another role without a test account. Register the panel (requires `tracy/tracy`):
+
+```neon
+tracy:
+	bar:
+		- Drago\Permission\Tracy\RoleSwitchPanel
+```
+
+The tab shows the current roles (red while they are switched). The panel lists the roles of the ACL, from static
+providers as well as from the database; **My roles** brings the real ones back, and signing out forgets the switch.
+Nette adds bar panels only in debug mode, so the panel never runs in production.

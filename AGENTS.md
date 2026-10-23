@@ -7,7 +7,7 @@ Use this file as package-specific guidance when working in this repository. Keep
 - **Type**: library
 - **Purpose**: Lightweight ACL and role management.
 - **PHP**: >=8.3 <9
-- **Runtime dependencies**: nette/robot-loader (^4.1), nette/security (^3.1), nette/application (^3.2), nette/di (^3.1)
+- **Runtime dependencies**: nette/robot-loader (^4.1), nette/security (^3.1), nette/application (^3.2), nette/http (^3.3), nette/di (^3.1); tracy/tracy is suggested (role switch panel)
 - **License**: MIT
 
 ## Repository Layout
@@ -21,6 +21,7 @@ Use this file as package-specific guidance when working in this repository. Keep
 - `PermissionFactory` builds the ACL with the guest, user and admin roles and runs tagged `Provider` services.
 - `Authorization` trait checks the presenter name with the resolved privilege on startup; a presenter without a registered resource is denied. Guests are redirected to `signInDestination()` (`:Sign:in`).
 - `WriteAccess` trait (`isWriteAllowed()`) shows the write buttons of a component by the same `"{component}-write"` privilege `Authorization` checks for its signals (top-level component of `getUniqueId()`, presenter name as resource, unknown resource → false). Used by project-permission and documented in the READMEs of project-blog/project-static-page; keep both traits deriving the privilege the same way. `tests/TraitStub.php` lets PHPStan analyse both traits.
+- `Tracy\RoleSwitchPanel` (registered by the project in `tracy: bar:`, so Nette creates it only in debug mode) adds an `Application::onStartup` handler: a POSTed panel form (session token, only roles of the `Permission` authorizator) redirects with 303, otherwise the chosen roles are set on the `SimpleIdentity` on every request, because identity handlers such as project-auth's `wakeupIdentity()` load the real roles again. The logic is in `Tracy\RoleSwitch` (session section: user id, chosen and original roles, token; forgotten for another user or when signed out), tested without Tracy in `RoleSwitchTest.phpt`. Works with static providers and with project-permission's database roles.
 - `src/Permission/conf.neon` is not loaded automatically; its `search` section needs `nette/robot-loader`, which is therefore a runtime dependency.
 - `bin/create-permission` generates providers; it is tested through the CLI in `tests/cases/CreatePermissionCommandTest.phpt`.
 - `create-permission --packages` generates the providers that installed packages declare in `extra.drago-permission` (a PHP file returning definitions whose keys mirror the CLI options) and writes `.drago-project/permission.json`. It finds packages via `Composer\InstalledVersions`, so it does not depend on `drago-ex/project-tools`. Tests fake the installed packages with `InstalledVersions::reload()` in a generated `vendor/autoload.php`.
@@ -28,7 +29,7 @@ Use this file as package-specific guidance when working in this repository. Keep
 ## Dependencies
 
 Composer constraints describe the package contract. Before changing integration behavior, inspect the source and the actual call sites in this package; do not infer runtime usage solely from dependency declarations.
-Development dependencies include nette/tester (^2.5), nette/bootstrap (^3.1), phpstan/phpstan (^2.0), phpstan/phpstan-nette (^2.0).
+Development dependencies include nette/tester (^2.5), nette/bootstrap (^3.1), phpstan/phpstan (^2.0), phpstan/phpstan-nette (^2.0), tracy/tracy (^2.10).
 
 ## Essential Commands
 

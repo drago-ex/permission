@@ -30,6 +30,7 @@ composer require drago-ex/permission
 - Výchozí role: guest, user, admin
 - Automatická autorizace presenterů
 - Privilegia podle akcí a signálů
+- Panel pro přepínání rolí v Tracy
 
 ## Související balíček: dynamická správa rolí
 
@@ -442,3 +443,18 @@ $grid->addActionEdit(fn(int $id) => $this->handleEdit($id))
 ```
 
 Skrytí tlačítka je jen pro pohodlí; samotný signál dál kontroluje trait `Authorization`.
+
+## Přepínání rolí v Tracy
+
+Při vývoji umí Tracy bar přepnout role přihlášeného uživatele, takže aplikaci vyzkoušíte za jinou roli bez
+testovacího účtu. Zaregistrujte panel (vyžaduje `tracy/tracy`):
+
+```neon
+tracy:
+	bar:
+		- Drago\Permission\Tracy\RoleSwitchPanel
+```
+
+Záložka ukazuje aktuální role (červeně, když jsou přepnuté). Panel nabízí role z ACL, ze statických providerů
+i z databáze; **My roles** vrátí skutečné role a odhlášení přepnutí zapomene. Nette přidává panely do baru jen
+v ladicím režimu, takže v produkci panel nikdy neběží.

@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+use Drago\Permission\Tracy\RoleSwitch;
+use Tracy\Helpers;
+
+/**
+ * @var RoleSwitch $roleSwitch
+ * @var string $action
+ */
+
+$current = $roleSwitch->getCurrentRoles();
+?>
+<style>
+	#tracy-debug .drago-role-switch label { display: block; margin: 2px 0; }
+	#tracy-debug .drago-role-switch button { margin-top: 8px; padding: 3px 10px; }
+</style>
+
+<h1>Role switch</h1>
+
+<div class="tracy-inner drago-role-switch">
+<?php if (!$roleSwitch->isSignedIn()): ?>
+	<p>Sign in to switch roles.</p>
+<?php elseif ($roleSwitch->getAvailableRoles() === []): ?>
+	<p>The authorizator is not a Nette\Security\Permission.</p>
+<?php else: ?>
+	<?php if ($roleSwitch->isSwitched()): ?>
+		<p><b>The roles are simulated.</b></p>
+	<?php endif ?>
+
+	<form method="post" action="<?= Helpers::escapeHtml($action) ?>">
+		<input type="hidden" name="_token" value="<?= Helpers::escapeHtml($roleSwitch->getToken()) ?>">
+		<?php foreach ($roleSwitch->getAvailableRoles() as $role): ?>
+			<label>
+				<input type="checkbox" name="roles[]" value="<?= Helpers::escapeHtml($role) ?>"<?= in_array($role, $current, true) ? ' checked' : '' ?>>
+				<?= Helpers::escapeHtml($role) ?>
+			</label>
+		<?php endforeach ?>
+
+		<button type="submit" name="<?= RoleSwitch::Field ?>" value="switch">Switch</button>
+		<?php if ($roleSwitch->isSwitched()): ?>
+			<button type="submit" name="<?= RoleSwitch::Field ?>" value="reset">My roles</button>
+		<?php endif ?>
+	</form>
+<?php endif ?>
+</div>
