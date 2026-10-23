@@ -418,3 +418,25 @@ bdump($this->getSignal());
 ```
 
 or log the value inside `resolveAclResource()`.
+
+## Write Buttons
+
+The `WriteAccess` trait lets a component show its add, edit and delete buttons only to those who may use them.
+`isWriteAllowed()` asks for the same `{component}-write` privilege that the `Authorization` trait checks for the
+component's signals, so it works with static providers as well as with roles from the database:
+
+```php
+use Drago\Permission\WriteAccess;
+
+class ArticleControl extends Nette\Application\UI\Control
+{
+	use WriteAccess;
+}
+```
+
+```php
+$grid->addActionEdit(fn(int $id) => $this->handleEdit($id))
+	->setVisible($this->isWriteAllowed());
+```
+
+Hiding a button is only for comfort; the signal itself is still checked by the `Authorization` trait.
