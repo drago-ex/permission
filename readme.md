@@ -375,11 +375,12 @@ use Drago\Datagrid\DataGrid;
 
 protected function isReadOnlySignal(string $receiver, string $name): bool
 {
-	return DataGrid::isReadOnlySignal($receiver, $name);
+	return DataGrid::isReadOnlySignal($this, $receiver, $name);
 }
 ```
 
-This does not depend on the name of the grid component; row actions (`roles-dataGrid:action`)
+The grid looks the receiver up in the presenter: it does not depend on the name of the grid component,
+and a `sort` signal of another component stays a write. Row actions (`roles-dataGrid:action`)
 stay `roles-write`.
 
 ### Full example

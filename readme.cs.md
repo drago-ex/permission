@@ -375,11 +375,12 @@ use Drago\Datagrid\DataGrid;
 
 protected function isReadOnlySignal(string $receiver, string $name): bool
 {
-	return DataGrid::isReadOnlySignal($receiver, $name);
+	return DataGrid::isReadOnlySignal($this, $receiver, $name);
 }
 ```
 
-Nezáleží to na názvu komponenty gridu; akce řádků (`roles-dataGrid:action`)
+Grid si příjemce dohledá v presenteru: nezáleží na názvu komponenty gridu
+a signál `sort` jiné komponenty zůstává zápisem. Akce řádků (`roles-dataGrid:action`)
 zůstávají `roles-write`.
 
 ### Úplný příklad
