@@ -42,7 +42,7 @@ final class RoleSwitchPanel implements IBarPanel
 		$style = $this->roleSwitch->isSwitched() ? ' style="color: #c00; font-weight: bold"' : '';
 
 		return '<span title="Role switch"' . $style . '>'
-			. '<svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="currentColor"/><path d="M2 15c0-3.3 2.7-6 6-6s6 2.7 6 6z" fill="currentColor"/></svg>'
+			. '<svg viewBox="0 0 16 16"><path d="M8 1 2 3.5v4c0 3.6 2.6 6.4 6 7.5 3.4-1.1 6-3.9 6-7.5v-4z" fill="#2a8f6b"/><path d="m5 8 2 2 4-4" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 			. '<span class="tracy-label">' . Helpers::escapeHtml($roles) . '</span></span>';
 	}
 
