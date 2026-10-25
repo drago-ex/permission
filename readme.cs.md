@@ -393,13 +393,13 @@ class ArticlePresenter extends BasePresenter
 {
 	protected function readOnlySignals(): array
 	{
-		// tyto signály jen čtou data, kontrolují se jako "{component}-read"
+		// these signals only read data checked as "{component}-read"
 		return ['sort', 'page', 'resetFilters', 'setPageSize'];
 	}
 
 	protected function readOnlyReceivers(): array
 	{
-		// podkomponenty DataGridu jen pro čtení s obecnými názvy signálů
+		// read-only DataGrid subcomponents with generic signal names
 		return ['Grid-filters', 'Grid-paginator', 'Grid-pageSize'];
 	}
 }
