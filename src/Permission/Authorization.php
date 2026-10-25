@@ -22,9 +22,12 @@ trait Authorization
 
 			if (!$this->isAclAllowed($user, (string) $presenter->getName(), $resource)) {
 				if (!$user->isLoggedIn()) {
+					// only a plain GET page is stored for the return: a signal or a form replayed after signing in
+					// would pass as a same-origin request (e.g. a delete from a link sent to the user)
+					$request = $presenter->getRequest();
 					$presenter->flashMessage('You must be logged in.');
 					$presenter->redirect($this->signInDestination(), [
-						'backlink' => $presenter->storeRequest(),
+						'backlink' => $presenter->getSignal() === null && $request->isMethod('GET') ? $presenter->storeRequest() : null,
 					]);
 				} else {
 					$presenter->error('Forbidden', 403);

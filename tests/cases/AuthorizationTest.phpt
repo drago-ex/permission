@@ -132,10 +132,18 @@ function createPresenter(?IIdentity $identity): TestPresenter
 }
 
 
-function startup(TestPresenter $presenter, string $name, string $action): void
+function startup(
+	TestPresenter $presenter,
+	string $name,
+	string $action,
+	string $method = 'GET',
+	?string $receiver = null,
+	?string $signal = null,
+): void
 {
 	$presenter->setParent(null, $name);
-	$presenter->configure($action, null, null);
+	$presenter->configure($action, $receiver, $signal);
+	(new ReflectionProperty(Presenter::class, 'request'))->setValue($presenter, new Nette\Application\Request($name, $method));
 	$presenter->onStartup();
 }
 
@@ -171,6 +179,17 @@ test('A guest is redirected to sign in with a backlink', function () {
 	$presenter = createPresenter(null);
 	startup($presenter, 'Admin', 'default');
 	Assert::same([':Sign:in', ['backlink' => 'stored']], $presenter->redirectedTo);
+});
+
+
+test('A signal or a form of a guest is not stored, so it is not replayed after signing in', function () {
+	$presenter = createPresenter(null);
+	startup($presenter, 'Admin', 'default', receiver: 'grid', signal: 'delete');
+	Assert::same([':Sign:in', ['backlink' => null]], $presenter->redirectedTo);
+
+	$presenter = createPresenter(null);
+	startup($presenter, 'Admin', 'default', method: 'POST');
+	Assert::same([':Sign:in', ['backlink' => null]], $presenter->redirectedTo);
 });
 
 

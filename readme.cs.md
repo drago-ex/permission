@@ -254,7 +254,8 @@ class BasePresenter extends Nette\Application\UI\Presenter
 Všechny presentery, které dědí z `BasePresenter`, pak mají automatickou kontrolu autorizace.
 
 Neoprávněný přístup:
-- nepřihlášený: přesměrování na `:Sign:in` s backlinkem (cíl změníte přepsáním `signInDestination()`)
+- nepřihlášený: přesměrování na `:Sign:in` s backlinkem (cíl změníte přepsáním `signInDestination()`); uloží se jen
+  obyčejná GET stránka, signál ani formulář se po přihlášení nezopakuje
 - přihlášený bez oprávnění: HTTP 403
 - presenter bez registrovaného zdroje ACL se zamítne stejně, takže zapomenutý provider nikdy stránku neotevře
 

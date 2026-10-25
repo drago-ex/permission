@@ -254,7 +254,8 @@ class BasePresenter extends Nette\Application\UI\Presenter
 All presenters extending `BasePresenter` will then have automatic authorization checks applied.
 
 Unauthorized access:
-- not logged in: redirect to `:Sign:in` with a backlink (override `signInDestination()` to change the target)
+- not logged in: redirect to `:Sign:in` with a backlink (override `signInDestination()` to change the target); only a
+  plain GET page is stored, a signal or a form is not replayed after signing in
 - logged in but forbidden: HTTP 403
 - a presenter without a registered ACL resource is denied the same way, so forgetting a provider never opens a page
 
