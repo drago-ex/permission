@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drago\Permission;
 
 use Nette\Application\UI\Presenter;
-use Nette\InvalidStateException;
 use Nette\Security\User;
 
 
@@ -20,7 +19,7 @@ trait Authorization
 		$presenter->onStartup[] = function () use ($presenter, $user) {
 			$resource = $this->resolveAclResource($presenter);
 
-			if (!$this->isAclAllowed($user, (string) $presenter->getName(), $resource)) {
+			if (!Privilege::isAllowed($user, (string) $presenter->getName(), $resource)) {
 				if (!$user->isLoggedIn()) {
 					// only a plain GET page is stored for the return: a signal or a form replayed after signing in
 					// would pass as a same-origin request (e.g. a delete from a link sent to the user)
@@ -73,10 +72,7 @@ trait Authorization
 		[$receiver, $name] = $signal;
 
 		if ($receiver !== '') {
-			$group = explode('-', $receiver)[0];
-			return $this->isReadOnlySignal($receiver, $name)
-				? "$group-read"
-				: "$group-write";
+			return Privilege::forComponent($receiver, write: !$this->isReadOnlySignal($receiver, $name));
 		}
 
 		return $name;
@@ -96,18 +92,5 @@ trait Authorization
 		}
 
 		return in_array($name, $this->readOnlySignals(), true);
-	}
-
-
-	/**
-	 * A presenter without a registered ACL resource is denied, instead of failing with an exception.
-	 */
-	private function isAclAllowed(User $user, string $resource, string $privilege): bool
-	{
-		try {
-			return $user->isAllowed($resource, $privilege);
-		} catch (InvalidStateException) {
-			return false;
-		}
 	}
 }
