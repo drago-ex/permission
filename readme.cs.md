@@ -144,38 +144,19 @@ public function register(Permission $acl): void
 }
 ```
 
-### Providery deklarované balíčky
+### Providery balíčků
 
-Balíček deklaruje své providery v `composer.json`:
+Balíček, který providery potřebuje, má skript volající `create-permission` s jeho argumenty a uvádí ho
+v `composer.json`; `vendor/bin/drago-commands` z [drago-ex/project-tools](https://github.com/drago-ex/project-tools)
+spustí skripty všech nainstalovaných balíčků:
 
 ```json
 "extra": {
-	"drago-permission": "permission.php"
+	"drago-tools": {
+		"commands": ["bin/create-front-permission"]
+	}
 }
 ```
-
-Soubor vrací seznam definic se stejnými hodnotami jako volby výše
-(`className`, `namespace`, `resource`, `outputDir`, `allow`, `allowRole`, `allowPrivilege`, `addResource`, `allowWithResource`):
-
-```php
-return [
-	[
-		'className' => 'PermissionProvider',
-		'namespace' => 'App\Presentation\Sign',
-		'resource' => 'Sign',
-		'outputDir' => 'app/Presentation/Sign',
-		'allow' => ['RoleGuest,self::Resource'],
-	],
-];
-```
-
-Vygenerování providerů všech nainstalovaných balíčků:
-
-```bash
-vendor/bin/create-permission --packages
-```
-
-Existující třídy se ponechají, `--force` je přepíše. Výsledek se zapíše do `.drago-project/permission.json`.
 
 ## Konfigurace DI
 
@@ -447,7 +428,13 @@ Záložka ukazuje aktuální role (červeně, když jsou přepnuté). Panel nab�
 i z databáze; **My roles** vrátí skutečné role a odhlášení přepnutí zapomene. Nette přidává panely do baru jen
 v ladicím režimu, takže v produkci panel nikdy neběží.
 
-## Související balíček: dynamická správa rolí
+---
+
+## Volitelné doplňky
+
+Balíček funguje i bez nich. Pokud je projekt potřebuje, nastavte je ručně podle popisu níže.
+
+### Související balíček: dynamická správa rolí
 
 Pro dynamickou správu rolí a přístupů použijte:
 

@@ -144,38 +144,19 @@ public function register(Permission $acl): void
 }
 ```
 
-### Providers Declared by Packages
+### Providers of Packages
 
-A package declares its providers in `composer.json`:
+A package that needs providers ships a script that calls `create-permission` with its arguments and lists it
+in `composer.json`; `vendor/bin/drago-commands` of [drago-ex/project-tools](https://github.com/drago-ex/project-tools)
+runs the scripts of all installed packages:
 
 ```json
 "extra": {
-	"drago-permission": "permission.php"
+	"drago-tools": {
+		"commands": ["bin/create-front-permission"]
+	}
 }
 ```
-
-The file returns a list of definitions with the same values as the options above
-(`className`, `namespace`, `resource`, `outputDir`, `allow`, `allowRole`, `allowPrivilege`, `addResource`, `allowWithResource`):
-
-```php
-return [
-	[
-		'className' => 'PermissionProvider',
-		'namespace' => 'App\Presentation\Sign',
-		'resource' => 'Sign',
-		'outputDir' => 'app/Presentation/Sign',
-		'allow' => ['RoleGuest,self::Resource'],
-	],
-];
-```
-
-Generate the providers of all installed packages:
-
-```bash
-vendor/bin/create-permission --packages
-```
-
-Existing classes are kept, `--force` overwrites them. The result is written to `.drago-project/permission.json`.
 
 ## DI Configuration
 
@@ -447,7 +428,13 @@ The tab shows the current roles (red while they are switched). The panel lists t
 providers as well as from the database; **My roles** brings the real ones back, and signing out forgets the switch.
 Nette adds bar panels only in debug mode, so the panel never runs in production.
 
-## Related Package: Dynamic Role Management
+---
+
+## Optional add-ons
+
+The package works without them. Set them up by hand as described below when the project needs them.
+
+### Related Package: Dynamic Role Management
 
 For dynamic role and access management, use:
 
