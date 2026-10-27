@@ -30,18 +30,6 @@ composer require drago-ex/permission
 - Privilegia podle akcí a signálů
 - Panel pro přepínání rolí v Tracy
 
-## Související balíček: dynamická správa rolí
-
-Pro dynamickou správu rolí a přístupů použijte:
-
-- `drago-ex/project-permission`: https://github.com/drago-ex/project-permission
-
-Tento balíček je postavený na `drago-ex/permission` a poskytuje:
-
-- vytváření rolí
-- přiřazování rolí uživatelům
-- povolení nebo zakázání přístupu pro jednotlivé role
-
 ## Role
 
 Výchozí role:
@@ -458,3 +446,15 @@ tracy:
 Záložka ukazuje aktuální role (červeně, když jsou přepnuté). Panel nabízí role z ACL, ze statických providerů
 i z databáze; **My roles** vrátí skutečné role a odhlášení přepnutí zapomene. Nette přidává panely do baru jen
 v ladicím režimu, takže v produkci panel nikdy neběží.
+
+## Související balíček: dynamická správa rolí
+
+Pro dynamickou správu rolí a přístupů použijte:
+
+- `drago-ex/project-permission`: https://github.com/drago-ex/project-permission
+
+Tento balíček je postavený na `drago-ex/permission` a poskytuje:
+
+- vytváření rolí
+- přiřazování rolí uživatelům
+- povolení nebo zakázání přístupu pro jednotlivé role

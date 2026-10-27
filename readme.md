@@ -30,18 +30,6 @@ composer require drago-ex/permission
 - Action and signal based privileges
 - Role switch panel for Tracy
 
-## Related Package: Dynamic Role Management
-
-For dynamic role and access management, use:
-
-- `drago-ex/project-permission`: https://github.com/drago-ex/project-permission
-
-This package is built on top of `drago-ex/permission` and provides:
-
-- role creation
-- assigning roles to users
-- allowing or denying access per role
-
 ## Roles
 
 Default roles:
@@ -458,3 +446,15 @@ tracy:
 The tab shows the current roles (red while they are switched). The panel lists the roles of the ACL, from static
 providers as well as from the database; **My roles** brings the real ones back, and signing out forgets the switch.
 Nette adds bar panels only in debug mode, so the panel never runs in production.
+
+## Related Package: Dynamic Role Management
+
+For dynamic role and access management, use:
+
+- `drago-ex/project-permission`: https://github.com/drago-ex/project-permission
+
+This package is built on top of `drago-ex/permission` and provides:
+
+- role creation
+- assigning roles to users
+- allowing or denying access per role
