@@ -1,7 +1,5 @@
 # Drago Permission
 
-[English](readme.md) | Čeština
-
 Malá správa ACL a rolí.
 Balíček poskytuje centrální továrnu ACL, registraci oprávnění po modulech
 a automatickou kontrolu autorizace v presenterech.
