@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Drago\Permission\Tracy;
 
@@ -9,6 +7,7 @@ use Nette\Http\SessionSection;
 use Nette\Security\Permission;
 use Nette\Security\SimpleIdentity;
 use Nette\Security\User;
+use function is_array, is_string;
 
 
 /**
@@ -16,14 +15,14 @@ use Nette\Security\User;
  * The chosen roles live in the session and replace the roles of the signed-in user on every request,
  * so they survive identity handlers that load the roles again; reset() brings back the real ones.
  */
-final class RoleSwitch
+final readonly class RoleSwitch
 {
 	public const string Field = '_roleSwitch';
 
 
 	public function __construct(
-		private readonly User $user,
-		private readonly SessionSection $section,
+		private User $user,
+		private SessionSection $section,
 	) {
 	}
 

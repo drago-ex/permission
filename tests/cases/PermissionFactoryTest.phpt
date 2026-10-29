@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 use Drago\Permission\PermissionFactory;
 use Drago\Permission\Provider;

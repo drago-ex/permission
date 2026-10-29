@@ -1,10 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * Test: Drago\Permission\Tracy\RoleSwitch
  */
-
-declare(strict_types=1);
 
 use Drago\Permission\Tracy\RoleSwitch;
 use Nette\Http\Request;

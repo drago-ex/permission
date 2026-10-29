@@ -1,10 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * Test: Drago\Permission\WriteAccess
  */
-
-declare(strict_types=1);
 
 use Drago\Permission\WriteAccess;
 use Nette\Application\UI\Control;

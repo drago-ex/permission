@@ -1,10 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * Test: bin/create-permission
  */
-
-declare(strict_types=1);
 
 use Tester\Assert;
 
@@ -38,7 +36,14 @@ function outputDir(): string
 
 test('A provider class is generated with the resource and allow rules', function () {
 	$dir = outputDir();
-	[$code] = runCommand('PermissionProvider', 'App\Presentation\Backend\Admin', 'Backend:Admin', $dir, '--allow=RoleAdmin', '--allow=RoleUser,self::Resource,default');
+	[$code] = runCommand(
+		'PermissionProvider',
+		'App\Presentation\Backend\Admin',
+		'Backend:Admin',
+		$dir,
+		'--allow=RoleAdmin',
+		'--allow=RoleUser,self::Resource,default',
+	);
 
 	Assert::same(0, $code);
 	$file = dirname(__DIR__, 2) . '/' . $dir . '/PermissionProvider.php';

@@ -1,10 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * Test: Drago\Permission\Authorization
  */
-
-declare(strict_types=1);
 
 use Drago\Permission\Authorization;
 use Drago\Permission\Role;
