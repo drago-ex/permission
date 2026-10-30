@@ -7,6 +7,7 @@ use Nette\Http\SessionSection;
 use Nette\Security\Permission;
 use Nette\Security\SimpleIdentity;
 use Nette\Security\User;
+use Random\RandomException;
 use function is_array, is_string;
 
 
@@ -46,6 +47,7 @@ final readonly class RoleSwitch
 
 	/**
 	 * Handles a submitted panel form; returns true when the request should be redirected.
+	 * @throws RandomException
 	 */
 	public function handle(IRequest $request): bool
 	{
@@ -125,6 +127,7 @@ final readonly class RoleSwitch
 	}
 
 
+	/** @throws RandomException */
 	public function getToken(): string
 	{
 		$token = $this->section->get('token');

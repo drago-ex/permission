@@ -7,6 +7,7 @@ use Nette\Http\IRequest;
 use Nette\Http\IResponse;
 use Nette\Http\Session;
 use Nette\Security\User;
+use Random\RandomException;
 use Tracy\Helpers;
 use Tracy\IBarPanel;
 
@@ -56,6 +57,7 @@ final class RoleSwitchPanel implements IBarPanel
 	}
 
 
+	/** @throws RandomException */
 	private function startup(): void
 	{
 		if ($this->roleSwitch->handle($this->request)) {
