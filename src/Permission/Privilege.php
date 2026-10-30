@@ -22,9 +22,7 @@ final class Privilege
 	}
 
 
-	/**
-	 * A presenter without a registered ACL resource is denied, instead of failing with an exception.
-	 */
+	/** A presenter without a registered ACL resource is denied, instead of failing with an exception. */
 	public static function isAllowed(User $user, string $resource, string $privilege): bool
 	{
 		try {
