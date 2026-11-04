@@ -8,8 +8,3 @@ if (@!include __DIR__ . '/../vendor/autoload.php') { // @ dependencies may not b
 Tester\Environment::setup();
 Tester\Environment::setupFunctions();
 date_default_timezone_set('Europe/Prague');
-
-$loader = new Nette\Loaders\RobotLoader;
-$loader->addDirectory(__DIR__ . '/../src');
-$loader->setTempDirectory(__DIR__ . '/tmp');
-$loader->register();

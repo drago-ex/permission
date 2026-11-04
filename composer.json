@@ -11,21 +11,22 @@
 	],
 	"require": {
 		"php": ">=8.3 <9",
-		"nette/robot-loader": "^4.1",
 		"nette/security": "^3.1",
 		"nette/application": "^3.2",
-		"nette/http": "^3.3",
-		"nette/di": "^3.1"
+		"nette/http": "^3.3"
 	},
 	"require-dev": {
 		"nette/tester": "^2.5",
 		"nette/bootstrap": "^3.1",
 		"phpstan/phpstan": "^2.0",
 		"phpstan/phpstan-nette": "^2.0",
-		"tracy/tracy": "^2.10"
+		"tracy/tracy": "^2.10",
+		"latte/latte": "^3.0",
+		"nette/forms": "^3.2"
 	},
 	"suggest": {
-		"tracy/tracy": "For the role switch panel in the Tracy bar."
+		"tracy/tracy": "For the role switch panel in the Tracy bar.",
+		"latte/latte": "For the isAllowed() function in templates (Latte\\PermissionExtension)."
 	},
 	"autoload": {
 		"classmap": [
@@ -35,9 +36,18 @@
 			"Drago\\": "src"
 		}
 	},
-	"bin": [
-		"bin/create-permission"
-	],
+	"extra": {
+		"drago-tools": {
+			"install": {
+				"copy": {
+					"resources/app": "app"
+				}
+			}
+		},
+		"drago-translator": {
+			"translation": "src/Permission/Translate"
+		}
+	},
 	"scripts": {
 		"phpstan": "phpstan analyse",
 		"tester": "tester tests/cases -s -C"

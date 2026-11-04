@@ -3,9 +3,10 @@
 namespace Drago\Permission;
 
 
-class Role
+/** Names of the base roles of role.acl.neon. */
+final class Role
 {
-	public const string RoleGuest = 'guest',
-		RoleUser = 'user',
-		RoleAdmin = 'admin';
+	public const string Guest = 'guest',
+		User = 'user',
+		Admin = 'admin';
 }

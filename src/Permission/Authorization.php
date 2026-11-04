@@ -2,35 +2,47 @@
 
 namespace Drago\Permission;
 
+use Nette\Application\AbortException;
+use Nette\Application\BadRequestException;
 use Nette\Application\UI\Presenter;
-use Nette\Security\User;
 
 
+/**
+ * Checks the ACL of a presenter, with the presenter name as the resource and the operation as the privilege:
+ * the page (its action, e.g. "default") on startup, and a signal right before its handler runs, when the receiving
+ * component exists (its name, e.g. "delete", or what its Access attribute sets).
+ * @mixin Presenter
+ * @phpstan-require-extends Presenter
+ */
 trait Authorization
 {
-	/**
-	 * Registers an authorization check executed on presenter startup.
-	 * Redirects unauthenticated users to login, throws 403 for unauthorized access.
-	 */
-	public function injectAuthorization(Presenter $presenter, User $user): void
+	/** Registers the check of the page (the action as the privilege) on presenter startup. */
+	public function injectAuthorization(): void
 	{
-		$presenter->onStartup[] = function () use ($presenter, $user) {
-			$resource = $this->resolveAclResource($presenter);
-
-			if (!Privilege::isAllowed($user, (string) $presenter->getName(), $resource)) {
-				if (!$user->isLoggedIn()) {
-					// only a plain GET page is stored for the return: a signal or a form replayed after signing in
-					// would pass as a same-origin request (e.g. a delete from a link sent to the user)
-					$request = $presenter->getRequest();
-					$presenter->flashMessage('You must be logged in.');
-					$presenter->redirect($this->signInDestination(), [
-						'backlink' => $presenter->getSignal() === null && $request->isMethod('GET') ? $presenter->storeRequest() : null,
-					]);
-				} else {
-					$presenter->error('Forbidden', 403);
-				}
-			}
+		$this->onStartup[] = function (): void {
+			$this->checkPrivilege($this->getAction());
 		};
+	}
+
+
+	/**
+	 * Checks the privilege of the signal before Nette calls its handler.
+	 * @throws AbortException
+	 * @throws BadRequestException
+	 */
+	public function processSignal(): void
+	{
+		$signal = $this->getSignal();
+		if ($signal !== null) {
+			[$receiver, $name] = $signal;
+			$component = $receiver === '' ? $this : $this->getComponent($receiver, throw: false);
+			$privilege = $component === null ? $name : Privilege::forSignal($component, $name);
+			if ($privilege !== null) {
+				$this->checkPrivilege($privilege);
+			}
+		}
+
+		parent::processSignal();
 	}
 
 
@@ -41,54 +53,29 @@ trait Authorization
 	}
 
 
-	/** @return list<string> */
-	protected function readOnlySignals(): array
-	{
-		return [];
-	}
-
-
-	/** @return list<string> */
-	protected function readOnlyReceivers(): array
-	{
-		return [];
-	}
-
-
 	/**
-	 * Resolves ACL privilege from the current presenter action or signal.
-	 * Page load -> "{action}-read", signals -> "{component}-read/write".
+	 * Redirects a guest to sign in and gives a signed-in user 403 when the privilege is not allowed.
+	 * @throws AbortException
+	 * @throws BadRequestException
 	 */
-	protected function resolveAclResource(Presenter $presenter): string
+	private function checkPrivilege(string $privilege): void
 	{
-		$signal = $presenter->getSignal();
-
-		if ($signal === null) {
-			return $presenter->getAction() . '-read';
+		$user = $this->getUser();
+		if (Privilege::isAllowed($user, (string) $this->getName(), $privilege)) {
+			return;
 		}
 
-		[$receiver, $name] = $signal;
-
-		if ($receiver !== '') {
-			return Privilege::forComponent($receiver, write: !$this->isReadOnlySignal($receiver, $name));
+		if ($user->isLoggedIn()) {
+			$this->error('Forbidden', 403);
 		}
 
-		return $name;
-	}
+		// only a plain GET page is stored for the return: a signal or a form replayed after signing in
+		// would pass as a same-origin request (e.g. a delete from a link sent to the user)
+		$backlink = $this->getSignal() === null && $this->getRequest()->isMethod('GET')
+			? $this->storeRequest()
+			: null;
 
-
-	/**
-	 * Decides whether a component signal only reads data. By default by readOnlySignals()
-	 * and readOnlyReceivers(); override it to ask a component, e.g. DataGrid::isReadOnlySignal().
-	 */
-	protected function isReadOnlySignal(string $receiver, string $name): bool
-	{
-		foreach ($this->readOnlyReceivers() as $mask) {
-			if (str_contains($receiver, $mask)) {
-				return true;
-			}
-		}
-
-		return in_array($name, $this->readOnlySignals(), true);
+		$this->flashMessage('You must be logged in.');
+		$this->redirect($this->signInDestination(), ['backlink' => $backlink]);
 	}
 }

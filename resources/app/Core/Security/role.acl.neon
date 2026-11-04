@@ -1,0 +1,10 @@
+# Base roles and the administrator, who is allowed everything.
+security:
+	roles:
+		guest:
+		user: [guest]
+		admin: [user]
+
+	rules:
+		allow:
+			- [admin]

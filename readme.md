@@ -1,7 +1,7 @@
 # Drago Permission
 
 Lightweight ACL and role management.
-The package provides a central ACL factory, modular permission registration per module,
+The package provides the base roles, ACL written in neon next to the code it protects,
 and automatic authorization checks in presenters.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/drago-ex/permission/blob/main/license)
@@ -23,191 +23,59 @@ composer require drago-ex/permission
 
 ## Features
 
-- Central ACL creation
-- Modular permission providers per module
 - Default roles: guest, user, admin
+- ACL in neon files, one per module
 - Automatic presenter authorization
-- Action and signal based privileges
+- Privileges named by the operation (`default`, `edit`, `delete`), set by the `Access` attribute where needed
+- Latte function `isAllowed()` for menus and links
 - Role switch panel for Tracy
 
 ## Roles
 
-Default roles:
+The package ships `role.acl.neon` with the default roles; the administrator is allowed everything:
 
 - guest
 - user (inherits from guest)
 - admin (inherits from user)
 
-Roles are registered automatically.
+[drago-ex/project-tools](https://github.com/drago-ex/project-tools) copies it into the project as
+`app/Core/Security/role.acl.neon`, where Nette loads it with the other configuration files of `app/`. A later update
+keeps your changes. Without project-tools, copy `resources/app/Core/Security/role.acl.neon` of this package there.
 
-## Permission Factory
+The role names are also available as constants of `Drago\Permission\Role`.
 
-PermissionFactory creates a Nette\Security\Permission instance,
-registers default roles, and runs all registered permission providers.
+## ACL of Modules
 
-Providers are collected via DI tags.
+The rules of a presenter are in `acl.neon` in its directory, next to its `conf.neon`, in the `security` section
+of Nette. Nette merges the files of all modules into one `Nette\Security\Permission` service, so no PHP code is needed.
 
-## Permission Providers
-
-Each module registers its own permissions using a Provider implementation.
-
-Providers:
-- register ACL resources
-- define allow / deny rules
-- live inside the module they belong to
-
-Typical resource naming:
-- Backend:Sign
-- Frontend:Article
-
-Example provider for a Sign module:
-
-```php
-use Drago\Permission\Provider;
-use Drago\Permission\Role;
-use Nette\Security\Permission;
-
-final class PermissionProvider implements Provider
-{
-	private const string Resource = 'Backend:Sign';
-
-
-	public function register(Permission $acl): void
-	{
-		$acl->addResource(self::Resource);
-		$acl->allow(Role::RoleGuest, self::Resource);
-	}
-}
-```
-
-This registers the `Backend:Sign` resource and grants access to guests (unauthenticated users),
-which is the minimum required for the login page to be accessible.
-
-## Permission Generator (CLI)
-
-The package provides a generator for module providers:
-
-```bash
-vendor/bin/create-permission
-```
-
-General usage:
-
-```bash
-vendor/bin/create-permission <ClassName> <Namespace> [Resource] [OutputDir] [options]
-```
-
-When you use the shared `PermissionProvider` class name, pass the resource and output directory explicitly.
-The class name is intentionally the same in every module and the namespace decides where the provider belongs.
-
-Example for a Sign module:
-
-```bash
-vendor/bin/create-permission PermissionProvider App\Presentation\Sign Sign app/Presentation/Sign
-```
-
-Example for an Admin module:
-
-```bash
-vendor/bin/create-permission PermissionProvider App\Presentation\Backend\Admin Backend:Admin app/Presentation/Backend/Admin --allow-role=RoleAdmin --allow-with-resource=0
-```
-
-### Options
-
-- `--allow-role=<RoleConstant>` default `RoleGuest`
-- `--allow-privilege=<string>` optional privilege argument for `allow()`
-- `--add-resource=<0|1>` default `1` (generate `$acl->addResource(...)`)
-- `--allow-with-resource=<0|1>` default `1` (generate `allow(..., self::Resource)`)
-- `--allow=<rule>` repeatable, custom allow rules
-- `--force` overwrite existing file
-
-`--allow` formats:
-
-- `--allow=RoleAdmin`
-- `--allow=RoleUser,self::Resource`
-- `--allow=RoleUser,self::Resource,default`
-
-Multi-rule example:
-
-```bash
-vendor/bin/create-permission PermissionProvider App\Presentation\Backend\Admin Backend:Admin app/Presentation/Backend/Admin --allow=RoleAdmin --allow=RoleUser,self::Resource,default
-```
-
-Generated `register()` example:
-
-```php
-public function register(Permission $acl): void
-{
-	$acl->addResource(self::Resource);
-	$acl->allow(Role::RoleAdmin);
-	$acl->allow(Role::RoleUser, self::Resource, 'default');
-}
-```
-
-### Providers of Packages
-
-A package that needs providers ships a script that calls `create-permission` with its arguments and lists it
-in `composer.json`; `vendor/bin/drago-commands` of [drago-ex/project-tools](https://github.com/drago-ex/project-tools)
-runs the scripts of all installed packages:
-
-```json
-"extra": {
-	"drago-tools": {
-		"commands": ["bin/create-front-permission"]
-	}
-}
-```
-
-## DI Configuration
-
-The package contains a ready configuration in `vendor/drago-ex/permission/src/Permission/conf.neon`.
-It is not loaded automatically; include it in your configuration, or copy its content:
+The resource is the presenter name. A rule is needed only for roles other than the administrator, for example
+public pages for guests:
 
 ```neon
-includes:
-	- ../vendor/drago-ex/permission/src/Permission/conf.neon
+# app/Presentation/Backend/Blog/acl.neon
+security:
+	resources:
+		Backend:Blog:
 ```
 
-The `search` section needs `nette/robot-loader`, which this package requires. The bundled config contains:
-
-- `permissionFactory` service registration
-- automatic `search` registration for `PermissionProvider` classes in `%appDir%/Presentation`
-
-Permission factory:
 ```neon
-services:
-	permissionFactory:
-		class: Drago\Permission\PermissionFactory
-		arguments: [tagged(PermissionTag)]
+# app/Presentation/Front/Blog/acl.neon
+security:
+	resources:
+		Front:Blog:
 
-	- @permissionFactory::create
+	rules:
+		allow:
+			- [guest, Front:Blog]
 ```
 
-Module provider:
-```neon
-services:
-	signPermission:
-		class: App\Presentation\Sign\PermissionProvider
-		tags: [PermissionTag]
-```
-
-For larger applications with many providers, you can use the `search` section to register all matching classes automatically instead of listing each one individually:
-```neon
-search:
-	permissions:
-		in: %appDir%/Presentation
-		classes: [PermissionProvider]
-		tags: [PermissionTag]
-```
+A new presenter needs its resource (and a guest rule when it is public) in the `acl.neon` next to it.
+A presenter without a resource is denied, see below.
 
 ## Presenter Authorization
 
-Authorization is handled by the `Authorization` trait.
-
-- runs automatically on presenter startup
-- checks ACL using presenter name and resolved privilege
-
-To activate authorization in a presenter, include the trait:
+Authorization is handled by the `Authorization` trait. Include it in the base presenter:
 
 ```php
 use Drago\Permission\Authorization;
@@ -218,200 +86,138 @@ class BasePresenter extends Nette\Application\UI\Presenter
 }
 ```
 
-All presenters extending `BasePresenter` will then have automatic authorization checks applied.
+As in the [Nette ACL](https://doc.nette.org/en/security/acl), the resource is what is protected (the presenter)
+and the privilege is the operation:
+
+| When                                    | Privilege                                                |
+|-----------------------------------------|----------------------------------------------------------|
+| on startup, every request               | the action: `default`, `comments`, `edit`                |
+| a signal, right before its handler runs | the signal: `delete!` → `delete`, `approve!` → `approve` |
+
+A signal also needs its page: deleting on `Blog:default` needs `default` and `delete`. The rules then read
+like the application:
+
+```neon
+security:
+	roles:
+		editor: [user]
+	rules:
+		allow:
+			- [editor, Backend:Blog, [default, comments, edit]]   # may edit, not delete
+```
 
 Unauthorized access:
 - not logged in: redirect to `:Sign:in` with a backlink (override `signInDestination()` to change the target); only a
   plain GET page is stored, a signal or a form is not replayed after signing in
 - logged in but forbidden: HTTP 403
-- a presenter without a registered ACL resource is denied the same way, so forgetting a provider never opens a page
+- a presenter without a registered ACL resource is denied the same way, so a forgotten resource never opens a page
 
-### Privilege resolution
+### The Access attribute
 
-The trait automatically resolves which ACL privilege to check based on the current request:
-
-| Situation                        | Resolved privilege  |
-|----------------------------------|---------------------|
-| Page load (no signal)            | `{action}-read`     |
-| Signal from a read-only receiver | `{component}-read`  |
-| Signal listed as read-only       | `{component}-read`  |
-| Any other signal                 | `{component}-write` |
-| Direct presenter signal (no component) | `{signal}`    |
-
-For component signals, Nette returns a pair from `Presenter::getSignal()`:
+A signal without the attribute needs the privilege named like it, a form the privilege named like the form
+(the `delete` form → `delete`). The `Access` attribute changes that on the handler, or on the factory
+`createComponent<Name>()` or the class of a component for all its signals and subcomponents (e.g. its form):
 
 ```php
-[$receiver, $signal] = $presenter->getSignal();
-```
-
-The receiver is the component path joined by hyphens. For example, if a presenter has a `roles`
-component and that component contains a `dataGrid` component with a `paginator` subcomponent,
-Nette can produce a signal like:
-
-```text
-roles-dataGrid-paginator:page
-```
-
-This is resolved as:
-
-```php
-$receiver = 'roles-dataGrid-paginator';
-$signal = 'page';
-```
-
-The authorization trait uses the first receiver segment as the privilege group:
-
-```php
-$group = explode('-', $receiver)[0]; // "roles"
-```
-
-So the signal above resolves to:
-
-```text
-roles-read
-```
-
-when it is configured as read-only, otherwise it resolves to:
-
-```text
-roles-write
-```
-
-### Read-only signals
-
-Override `readOnlySignals()` to declare signal names that should be treated as read operations.
-This checks only the signal name, not the component path.
-
-```php
-protected function readOnlySignals(): array
-{
-	return ['sort', 'page', 'resetFilters', 'setPageSize'];
-}
-```
-
-Examples:
-
-| Nette signal                      | Receiver                 | Signal          | Resolved privilege |
-|-----------------------------------|--------------------------|-----------------|--------------------|
-| `roles-dataGrid:sort`             | `roles-dataGrid`         | `sort`          | `roles-read`       |
-| `roles-dataGrid-paginator:page`   | `roles-dataGrid-paginator` | `page`        | `roles-read`       |
-| `roles-dataGrid:action`           | `roles-dataGrid`         | `action`        | `roles-write`      |
-
-### Read-only receivers
-
-Override `readOnlyReceivers()` to declare component path substrings whose signals should always
-resolve to read privilege. This checks the receiver path, not the signal name.
-
-```php
-protected function readOnlyReceivers(): array
-{
-	return ['Grid-filters', 'Grid-paginator', 'Grid-pageSize'];
-}
-```
-
-Any signal whose receiver name contains one of these strings will be resolved as `{component}-read` regardless of the signal name.
-
-This is useful for nested controls where the signal name is generic, for example a filter form submit:
-
-```text
-roles-dataGrid-filters-form:submit
-```
-
-The signal name is `submit`, but the receiver contains `Grid-filters`, so it resolves to:
-
-```text
-roles-read
-```
-
-Be careful with broad receiver masks such as `Grid`. They make every signal from that receiver read-only,
-including row actions like:
-
-```text
-roles-dataGrid:action
-```
-
-Use broad receiver masks only when the whole component is read-only.
-
-### Deciding in code
-
-For more than name lists, override `isReadOnlySignal()`. It receives the receiver path and the signal
-name and replaces both lists. Drago DataGrid knows its own read-only signals (sorting, filters, paging,
-page size), so a presenter with grids can simply ask it:
-
-```php
-use Drago\Datagrid\DataGrid;
-
-protected function isReadOnlySignal(string $receiver, string $name): bool
-{
-	return DataGrid::isReadOnlySignal($this, $receiver, $name);
-}
-```
-
-The grid looks the receiver up in the presenter: it does not depend on the name of the grid component,
-and a `sort` signal of another component stays a write. Row actions (`roles-dataGrid:action`)
-stay `roles-write`.
-
-### Full example
-
-```php
-use Drago\Permission\Authorization;
-
-class ArticlePresenter extends BasePresenter
-{
-	protected function readOnlySignals(): array
-	{
-		// these signals only read data checked as "{component}-read"
-		return ['sort', 'page', 'resetFilters', 'setPageSize'];
-	}
-
-	protected function readOnlyReceivers(): array
-	{
-		// read-only DataGrid subcomponents with generic signal names
-		return ['Grid-filters', 'Grid-paginator', 'Grid-pageSize'];
-	}
-}
-```
-
-With this configuration:
-
-| Nette signal                         | Resolved privilege |
-|--------------------------------------|--------------------|
-| `roles-dataGrid:sort`                | `roles-read`       |
-| `roles-dataGrid-paginator:page`      | `roles-read`       |
-| `roles-dataGrid-filters:resetFilters`| `roles-read`       |
-| `roles-dataGrid-filters-form:submit` | `roles-read`       |
-| `roles-dataGrid-pageSize:setPageSize`| `roles-read`       |
-| `roles-dataGrid:action`              | `roles-write`      |
-
-If you are not sure what Nette produces for a specific request, temporarily inspect:
-
-```php
-bdump($this->getSignal());
-```
-
-or log the value inside `resolveAclResource()`.
-
-## Write Buttons
-
-The `WriteAccess` trait lets a component show its add, edit and delete buttons only to those who may use them.
-`isWriteAllowed()` asks for the same `{component}-write` privilege that the `Authorization` trait checks for the
-component's signals, so it works with static providers as well as with roles from the database:
-
-```php
-use Drago\Permission\WriteAccess;
+use Drago\Permission\Access;
 
 class ArticleControl extends Nette\Application\UI\Control
 {
-	use WriteAccess;
+	public function handleDelete(int $id): void      // delete
+	{
+	}
+
+
+	#[Access('edit')]
+	public function handleRemoveImage(int $id): void // edit, a part of editing
+	{
+	}
+
+
+	#[Access]
+	public function handlePreview(): void            // the page is enough
+	{
+	}
+
+
+	#[Access('edit')]
+	protected function createComponentArticle(): Form // edit, its submit
+	{
+	}
+}
+```
+
+`#[Access(parameter: 'name')]` takes the privilege from a signal parameter. The signal is checked when its component
+already exists, so the attribute of the real class decides, whatever the component is named.
+[drago-ex/datagrid](https://github.com/drago-ex/datagrid) uses it this way: sorting, filters, paging and the page size
+need only the page, and a row action needs the privilege named like the action (`addActionEdit()` → `edit`,
+`addActionDelete()` → `delete`).
+
+The attribute needs nothing at runtime: PHP ignores an attribute whose class is not installed, so any Nette component
+or package can mark its signals and still work without this package.
+
+## Buttons
+
+The `AccessCheck` trait lets a component show its buttons only to those who may use them. `isAllowed()` asks for
+the privilege on the presenter of the component, the same one the `Authorization` trait checks for the signal:
+
+```php
+use Drago\Permission\AccessCheck;
+
+class ArticleControl extends Nette\Application\UI\Control
+{
+	use AccessCheck;
 }
 ```
 
 ```php
-$grid->addActionEdit(fn(int $id) => $this->handleEdit($id))
-	->setVisible($this->isWriteAllowed());
+$grid->addActionDelete(fn(int $id) => $this->handleDelete($id))
+	->setVisible($this->isAllowed('delete'));
+```
+
+```latte
+<a n:if="$control->isAllowed('add')" n:href="add!" class="btn btn-primary btn-sm">Add</a>
 ```
 
 Hiding a button is only for comfort; the signal itself is still checked by the `Authorization` trait.
+
+## Checking Other Places
+
+For a menu item or a link to another presenter, `Privilege::isAllowed()` is true when the user has at least one
+of the privileges on the resource. A resource or role the ACL does not know is denied instead of throwing:
+
+```php
+use Drago\Permission\Privilege;
+
+Privilege::isAllowed($this->getUser(), 'Backend:Permission', 'default', 'users');
+```
+
+In templates, register the Latte extension (requires `latte/latte`):
+
+```neon
+latte:
+	extensions:
+		- Drago\Permission\Latte\PermissionExtension
+```
+
+and use the function `isAllowed()` with the same arguments:
+
+```latte
+<li n:if="isAllowed('Backend:Permission', 'default', 'users')">
+	<a n:href=":Backend:Permission:">Permissions</a>
+</li>
+```
+
+## Privileges of a Presenter
+
+`PrivilegeCatalog` reads the privileges of a presenter from its code by the same rules: the pages (`action*()`,
+`render*()` and the templates next to it) and the signals and forms of the presenter and its components. Signals that
+need only the page are left out. An administration of permissions offers them without any list kept by hand:
+
+```php
+$catalog = new Drago\Permission\PrivilegeCatalog($presenterFactory);
+$catalog->getPrivileges('Backend:Blog'); // ['default', 'categories', 'delete', 'edit', …]
+```
 
 ## Role Switch in Tracy
 
@@ -424,8 +230,8 @@ tracy:
 		- Drago\Permission\Tracy\RoleSwitchPanel
 ```
 
-The tab shows the current roles (red while they are switched). The panel lists the roles of the ACL, from static
-providers as well as from the database; **My roles** brings the real ones back, and signing out forgets the switch.
+The tab shows the current roles (red while they are switched). The panel lists the roles of the ACL, from neon
+as well as from the database; **My roles** brings the real ones back, and signing out forgets the switch.
 Nette adds bar panels only in debug mode, so the panel never runs in production.
 
 ---

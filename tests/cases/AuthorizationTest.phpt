@@ -4,10 +4,16 @@
  * Test: Drago\Permission\Authorization
  */
 
+use Drago\Permission\Access;
 use Drago\Permission\Authorization;
 use Drago\Permission\Role;
 use Nette\Application\BadRequestException;
+use Nette\Application\Request;
+use Nette\Application\UI\Control;
 use Nette\Application\UI\Presenter;
+use Nette\Http\Request as HttpRequest;
+use Nette\Http\Response;
+use Nette\Http\UrlScript;
 use Nette\Security\IIdentity;
 use Nette\Security\Permission;
 use Nette\Security\SimpleIdentity;
@@ -18,39 +24,74 @@ use Tester\Assert;
 require __DIR__ . '/../bootstrap.php';
 
 
-class TestPresenter extends Presenter
+final class ArticlesControl extends Control
 {
-	use Authorization;
-
-	public ?array $redirectedTo = null;
-
 	/** @var list<string> */
-	private array $signals = [];
-
-	/** @var list<string> */
-	private array $receivers = [];
+	public array $called = [];
 
 
-	public function configure(
-		string $action,
-		?string $receiver,
-		?string $signal,
-		array $signals = [],
-		array $receivers = [],
-	): void
+	#[Access]
+	public function handlePreview(): void
 	{
-		$reflection = new ReflectionClass(Presenter::class);
-		$reflection->getProperty('action')->setValue($this, $action);
-		$reflection->getProperty('signalReceiver')->setValue($this, $receiver ?? '');
-		$reflection->getProperty('signal')->setValue($this, $signal);
-		$this->signals = $signals;
-		$this->receivers = $receivers;
+		$this->called[] = 'preview';
 	}
 
 
-	public function resolve(): string
+	public function handleDelete(): void
 	{
-		return $this->resolveAclResource($this);
+		$this->called[] = 'delete';
+	}
+
+
+	#[Access('edit')]
+	public function handleSave(): void
+	{
+		$this->called[] = 'save';
+	}
+
+
+	#[Access(parameter: 'name')]
+	public function handleAction(string $name): void
+	{
+		$this->called[] = "action $name";
+	}
+}
+
+
+/** Every signal of the component, and of its subcomponents, needs only the page. */
+#[Access]
+final class FiltersControl extends Control
+{
+	public function handleReset(): void
+	{
+	}
+}
+
+
+final class FormControl extends Control
+{
+	public function handleSubmit(): void
+	{
+	}
+}
+
+
+class GuardedPresenter extends Presenter
+{
+	use Authorization;
+
+	/** @var array{string, array<string, mixed>}|null */
+	public ?array $redirectedTo = null;
+
+
+	#[Access]
+	public function handlePing(): void
+	{
+	}
+
+
+	public function handleLogout(): void
+	{
 	}
 
 
@@ -69,18 +110,6 @@ class TestPresenter extends Presenter
 	public function redirect(string $destination, $args = []): void
 	{
 		$this->redirectedTo = [$destination, $args];
-	}
-
-
-	protected function readOnlySignals(): array
-	{
-		return $this->signals;
-	}
-
-
-	protected function readOnlyReceivers(): array
-	{
-		return $this->receivers;
 	}
 }
 
@@ -115,109 +144,150 @@ final class TestUserStorage implements UserStorage
 }
 
 
-function createPresenter(?IIdentity $identity): TestPresenter
+/**
+ * The presenter $name with the action and an optional signal ("receiver:signal") with its parameters,
+ * for a user with the identity; a user may open "default" and "edit".
+ * @param array<string, mixed> $params
+ */
+function createPresenter(
+	?IIdentity $identity,
+	string $name = 'Admin',
+	string $action = 'default',
+	?string $signal = null,
+	array $params = [],
+	string $method = 'GET',
+): GuardedPresenter
 {
 	$acl = new Permission;
-	$acl->addRole(Role::RoleGuest);
-	$acl->addRole(Role::RoleUser, Role::RoleGuest);
+	$acl->addRole(Role::Guest);
+	$acl->addRole(Role::User, Role::Guest);
 	$acl->addResource('Admin');
-	$acl->allow(Role::RoleUser, 'Admin', 'default-read');
+	$acl->allow(Role::User, 'Admin', ['default', 'edit']);
 
-	$presenter = new TestPresenter;
-	$user = new User(storage: new TestUserStorage($identity), authorizator: $acl);
-	$presenter->injectAuthorization($presenter, $user);
+	$presenter = new GuardedPresenter;
+	$presenter->setParent(null, $name);
+	$presenter->injectPrimary(
+		new HttpRequest(new UrlScript('http://example.com/')),
+		new Response,
+		user: new User(storage: new TestUserStorage($identity), authorizator: $acl),
+	);
+	$presenter->injectAuthorization();
+	$presenter->addComponent($articles = new ArticlesControl, 'articles');
+	$presenter->addComponent($filters = new FiltersControl, 'filters');
+	$filters->addComponent(new FormControl, 'form');
+	$articles->loadState($params);
+
+	[$receiver, $signalName] = $signal === null ? ['', null] : explode(':', $signal);
+	$reflection = new ReflectionClass(Presenter::class);
+	$reflection->getProperty('action')->setValue($presenter, $action);
+	$reflection->getProperty('signalReceiver')->setValue($presenter, $receiver);
+	$reflection->getProperty('signal')->setValue($presenter, $signalName);
+	$reflection->getProperty('request')->setValue($presenter, new Request($name, $method));
 	return $presenter;
 }
 
 
-function startup(
-	TestPresenter $presenter,
-	string $name,
-	string $action,
-	string $method = 'GET',
-	?string $receiver = null,
-	?string $signal = null,
-): void
+function user(): SimpleIdentity
 {
-	$presenter->setParent(null, $name);
-	$presenter->configure($action, $receiver, $signal);
-	(new ReflectionProperty(Presenter::class, 'request'))->setValue($presenter, new Nette\Application\Request($name, $method));
-	$presenter->onStartup();
+	return new SimpleIdentity(1, [Role::User]);
 }
 
 
-test('Privileges are resolved from the action and signals', function () {
-	$presenter = new TestPresenter;
-
-	$presenter->configure('default', null, null);
-	Assert::same('default-read', $presenter->resolve());
-
-	$presenter->configure('default', 'articleGrid', 'delete');
-	Assert::same('articleGrid-write', $presenter->resolve());
-
-	$presenter->configure('default', 'articleGrid', 'sort', signals: ['sort']);
-	Assert::same('articleGrid-read', $presenter->resolve());
-
-	$presenter->configure('default', 'articleGrid-main', 'delete', receivers: ['articleGrid']);
-	Assert::same('articleGrid-read', $presenter->resolve());
-
-	$presenter->configure('default', null, 'ping');
-	Assert::same('ping', $presenter->resolve());
-});
+/** @return list<string> */
+function called(GuardedPresenter $presenter): array
+{
+	$articles = $presenter['articles'];
+	assert($articles instanceof ArticlesControl);
+	return $articles->called;
+}
 
 
-test('An allowed user passes', function () {
-	$presenter = createPresenter(new SimpleIdentity(1, [Role::RoleUser]));
-	startup($presenter, 'Admin', 'default');
+function assertForbidden(GuardedPresenter $presenter): void
+{
+	Assert::exception(fn() => $presenter->processSignal(), BadRequestException::class, 'Forbidden', 403);
+}
+
+
+test('A page is checked by its action', function () {
+	$presenter = createPresenter(user());
+	$presenter->onStartup();
 	Assert::null($presenter->redirectedTo);
+
+	$presenter = createPresenter(user(), action: 'comments');
+	Assert::exception(fn() => $presenter->onStartup(), BadRequestException::class, 'Forbidden', 403);
 });
 
 
 test('A guest is redirected to sign in with a backlink', function () {
 	$presenter = createPresenter(null);
-	startup($presenter, 'Admin', 'default');
+	$presenter->onStartup();
 	Assert::same([':Sign:in', ['backlink' => 'stored']], $presenter->redirectedTo);
 });
 
 
 test('A signal or a form of a guest is not stored, so it is not replayed after signing in', function () {
-	$presenter = createPresenter(null);
-	startup($presenter, 'Admin', 'default', receiver: 'grid', signal: 'delete');
+	$presenter = createPresenter(null, signal: 'articles:delete');
+	$presenter->onStartup();
 	Assert::same([':Sign:in', ['backlink' => null]], $presenter->redirectedTo);
 
-	$presenter = createPresenter(null);
-	startup($presenter, 'Admin', 'default', method: 'POST');
+	$presenter = createPresenter(null, method: 'POST');
+	$presenter->onStartup();
 	Assert::same([':Sign:in', ['backlink' => null]], $presenter->redirectedTo);
-});
-
-
-test('A signed-in user without the privilege gets 403', function () {
-	$presenter = createPresenter(new SimpleIdentity(1, [Role::RoleUser]));
-	Assert::exception(fn() => startup($presenter, 'Admin', 'edit'), BadRequestException::class, 'Forbidden', 403);
 });
 
 
 test('A presenter without a registered ACL resource is denied, not a server error', function () {
-	$presenter = createPresenter(new SimpleIdentity(1, [Role::RoleUser]));
-	Assert::exception(fn() => startup($presenter, 'Unregistered', 'default'), BadRequestException::class, 'Forbidden', 403);
+	$presenter = createPresenter(user(), name: 'Unregistered');
+	Assert::exception(fn() => $presenter->onStartup(), BadRequestException::class, 'Forbidden', 403);
 
-	$presenter = createPresenter(null);
-	startup($presenter, 'Unregistered', 'default');
+	$presenter = createPresenter(null, name: 'Unregistered');
+	$presenter->onStartup();
 	Assert::same(':Sign:in', $presenter->redirectedTo[0]);
 });
 
 
-test('A presenter can decide about read-only signals itself', function () {
-	$presenter = new class extends TestPresenter {
-		protected function isReadOnlySignal(string $receiver, string $name): bool
-		{
-			return str_ends_with($receiver, '-paginator');
-		}
-	};
+test('A signal needs the privilege named like it, before its handler runs', function () {
+	$presenter = createPresenter(user(), signal: 'articles:delete');
+	assertForbidden($presenter);
+	Assert::same([], called($presenter));
+});
 
-	$presenter->configure('default', 'articles-dataGrid-paginator', 'page');
-	Assert::same('articles-read', $presenter->resolve());
 
-	$presenter->configure('default', 'articles-dataGrid', 'action');
-	Assert::same('articles-write', $presenter->resolve());
+test('Access sets the privilege of a signal', function () {
+	$presenter = createPresenter(user(), signal: 'articles:save');
+	$presenter->processSignal();
+	Assert::same(['save'], called($presenter));
+});
+
+
+test('Access without a privilege lets the page decide', function () {
+	$presenter = createPresenter(user(), signal: 'articles:preview');
+	$presenter->processSignal();
+	Assert::same(['preview'], called($presenter));
+});
+
+
+test('Access with a parameter takes the privilege from the signal parameter', function () {
+	$presenter = createPresenter(user(), signal: 'articles:action', params: ['name' => 'edit']);
+	$presenter->processSignal();
+	Assert::same(['action edit'], called($presenter));
+
+	assertForbidden(createPresenter(user(), signal: 'articles:action', params: ['name' => 'delete']));
+});
+
+
+test('Access on a component class covers its signals and those of its subcomponents', function () {
+	Assert::noError(fn() => createPresenter(user(), signal: 'filters:reset')->processSignal());
+	Assert::noError(fn() => createPresenter(user(), signal: 'filters-form:submit')->processSignal());
+});
+
+
+test('Signals of the presenter itself follow the same rules', function () {
+	Assert::noError(fn() => createPresenter(user(), signal: ':ping')->processSignal());
+	assertForbidden(createPresenter(user(), signal: ':logout'));
+});
+
+
+test('A signal of a missing component needs the privilege named like it', function () {
+	assertForbidden(createPresenter(user(), signal: 'missing:delete'));
 });

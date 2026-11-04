@@ -1,18 +1,19 @@
 <?php declare(strict_types=1);
 
+use Drago\Permission\AccessCheck;
 use Drago\Permission\Authorization;
-use Drago\Permission\WriteAccess;
 use Nette\Application\UI\Control;
+use Nette\Application\UI\Presenter;
 
 
 /** Let PHPStan analyse the traits, which no class in the package uses. */
-class TraitStub
+class AuthorizationStub extends Presenter
 {
 	use Authorization;
 }
 
 
-class WriteAccessStub extends Control
+class AccessCheckStub extends Control
 {
-	use WriteAccess;
+	use AccessCheck;
 }

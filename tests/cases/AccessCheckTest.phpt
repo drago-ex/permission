@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
 /**
- * Test: Drago\Permission\WriteAccess
+ * Test: Drago\Permission\AccessCheck
  */
 
-use Drago\Permission\WriteAccess;
+use Drago\Permission\AccessCheck;
 use Nette\Application\UI\Control;
 use Nette\Application\UI\Presenter;
 use Nette\Http\Request;
@@ -22,7 +22,7 @@ require __DIR__ . '/../bootstrap.php';
 
 final class ArticlesControl extends Control
 {
-	use WriteAccess;
+	use AccessCheck;
 }
 
 
@@ -56,15 +56,15 @@ final class SignedInStorage implements UserStorage
 }
 
 
-/** The control "articles" in the presenter $presenterName, for a user with the given role. */
-function isWriteAllowed(string $role, string $presenterName): bool
+/** Whether the control "articles" in the presenter $presenterName shows its delete button to a user with the role. */
+function isDeleteAllowed(string $role, string $presenterName): bool
 {
 	$acl = new Permission;
 	$acl->addRole('editor');
 	$acl->addRole('reader');
 	$acl->addResource('Backend:Blog');
-	$acl->allow('editor', 'Backend:Blog', 'articles-write');
-	$acl->allow('reader', 'Backend:Blog', 'articles-read');
+	$acl->allow('editor', 'Backend:Blog', ['default', 'delete']);
+	$acl->allow('reader', 'Backend:Blog', 'default');
 
 	$user = new User(storage: new SignedInStorage(new SimpleIdentity(1, [$role])), authorizator: $acl);
 	$presenter = new class extends Presenter {
@@ -73,16 +73,16 @@ function isWriteAllowed(string $role, string $presenterName): bool
 	$presenter->injectPrimary(new Request(new UrlScript('http://example.com/')), new Response, user: $user);
 	$presenter->addComponent($control = new ArticlesControl, 'articles');
 
-	return $control->isWriteAllowed();
+	return $control->isAllowed('delete');
 }
 
 
-test('The "{component}-write" privilege of the presenter shows the write buttons', function () {
-	Assert::true(isWriteAllowed('editor', 'Backend:Blog'));
-	Assert::false(isWriteAllowed('reader', 'Backend:Blog'));
+test('The privilege on the presenter of the component shows the button', function () {
+	Assert::true(isDeleteAllowed('editor', 'Backend:Blog'));
+	Assert::false(isDeleteAllowed('reader', 'Backend:Blog'));
 });
 
 
-test('A presenter without an ACL resource hides them, as the Authorization trait denies it', function () {
-	Assert::false(isWriteAllowed('editor', 'Backend:Unknown'));
+test('A presenter without an ACL resource hides it, as the Authorization trait denies it', function () {
+	Assert::false(isDeleteAllowed('editor', 'Backend:Unknown'));
 });
