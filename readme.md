@@ -219,10 +219,19 @@ $catalog = new Drago\Permission\PrivilegeCatalog($presenterFactory);
 $catalog->getPrivileges('Backend:Blog'); // ['default', 'categories', 'delete', 'edit', …]
 ```
 
+`getSources()` also tells which places of the code need each privilege, by kind (`PrivilegeCatalog::Page`,
+`Signal`, `Form`), e.g. for labels in the administration:
+
+```php
+$catalog->getSources('Backend:Blog')['delete'];
+// ['signal' => ['ArticleControl::handleDelete'], 'form' => ['delete']]
+```
+
 ## Role Switch in Tracy
 
 While developing, the Tracy bar can switch the roles of the signed-in user, so you can try the application as
-another role without a test account. Register the panel (requires `tracy/tracy`):
+another role without a test account. [Project Permission](https://github.com/drago-ex/project-permission) registers it
+by itself; otherwise register the panel (requires `tracy/tracy`):
 
 ```neon
 tracy:

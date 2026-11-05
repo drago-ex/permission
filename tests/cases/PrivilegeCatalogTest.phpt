@@ -43,6 +43,19 @@ test('Signals are named by Access or by themselves, page-only and parameter ones
 });
 
 
+test('Sources tell which places of the code need each privilege', function () use ($catalog) {
+	$sources = $catalog->getSources('Backend:Blog');
+	Assert::same([PrivilegeCatalog::Page => ['actionEdit'], PrivilegeCatalog::Signal => ['ArticlesControl::handleSave', 'ImportControl::handleUpload']], $sources['edit']);
+	Assert::same([PrivilegeCatalog::Page => ['renderDefault', 'default.latte']], $sources['default']);
+	Assert::same([PrivilegeCatalog::Page => ['categories.latte']], $sources['categories']);
+	Assert::same([PrivilegeCatalog::Signal => ['ArticlesControl::handleDelete']], $sources['delete']);
+	Assert::same([PrivilegeCatalog::Form => ['comments']], $sources['approve']);
+	Assert::same([PrivilegeCatalog::Form => ['archive']], $sources['archive']);
+	Assert::same($catalog->getPrivileges('Backend:Blog'), array_keys($sources));
+});
+
+
 test('A resource that is no presenter has no privileges', function () use ($catalog) {
 	Assert::same([], $catalog->getPrivileges('Front:Missing'));
+	Assert::same([], $catalog->getSources('Front:Missing'));
 });

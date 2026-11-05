@@ -21,6 +21,12 @@ use function is_string, strlen;
  */
 final readonly class PrivilegeCatalog
 {
+	/** Kinds of the places that need a privilege. */
+	public const string
+		Page = 'page',
+		Signal = 'signal',
+		Form = 'form';
+
 	/** How deep components inside components are read (a grid in a control is the second level). */
 	private const int MaxDepth = 3;
 
@@ -37,30 +43,42 @@ final readonly class PrivilegeCatalog
 	 */
 	public function getPrivileges(string $presenter): array
 	{
+		return array_map(strval(...), array_keys($this->getSources($presenter)));
+	}
+
+
+	/**
+	 * The privileges of the presenter with the places of its code that need them, pages first: by privilege the
+	 * kinds (Page, Signal, Form) with the names of the places (renderDefault, default.latte,
+	 * ArticleControl::handleDelete, the form name). Empty for a resource that is no presenter.
+	 * @return array<string, array<string, list<string>>>
+	 */
+	public function getSources(string $presenter): array
+	{
 		try {
 			$class = new ReflectionClass($this->presenterFactory->getPresenterClass($presenter));
 		} catch (InvalidPresenterException|ReflectionException) { // @phpstan-ignore catch.neverThrown (the class exists, PhpStorm wants it caught)
 			return [];
 		}
 
-		$privileges = $this->getPages($class);
-		$this->addComponent($privileges, $class, null, 0);
-		return array_values(array_unique($privileges));
+		$sources = [];
+		$this->addPages($sources, $class);
+		$this->addComponent($sources, $class, null, 0);
+		return $sources;
 	}
 
 
 	/**
+	 * @param array<string, array<string, list<string>>> $sources
 	 * @param ReflectionClass<covariant object> $class
-	 * @return list<string>
 	 */
-	private function getPages(ReflectionClass $class): array
+	private function addPages(array &$sources, ReflectionClass $class): void
 	{
-		$pages = [];
 		foreach ($class->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
 			$name = $method->getName();
 			foreach (['action', 'render'] as $prefix) {
 				if (str_starts_with($name, $prefix) && strlen($name) > strlen($prefix)) {
-					$pages[] = lcfirst(substr($name, strlen($prefix)));
+					$this->addSource($sources, lcfirst(substr($name, strlen($prefix))), self::Page, $name);
 				}
 			}
 		}
@@ -69,48 +87,62 @@ final readonly class PrivilegeCatalog
 		foreach ($file !== false ? (glob(dirname($file) . '/*.latte') ?: []) : [] as $template) {
 			$name = basename($template, '.latte');
 			if (!str_starts_with($name, '@')) {
-				$pages[] = $name;
+				$this->addSource($sources, $name, self::Page, basename($template));
 			}
 		}
-
-		return $pages;
 	}
 
 
 	/**
 	 * Adds the signals of the component class: its handle*() methods and the forms and components of its factories.
-	 * @param list<string> $privileges
+	 * @param array<string, array<string, list<string>>> $sources
 	 * @param ReflectionClass<covariant object> $class
 	 */
-	private function addComponent(array &$privileges, ReflectionClass $class, ?Access $inherited, int $depth): void
+	private function addComponent(array &$sources, ReflectionClass $class, ?Access $inherited, int $depth): void
 	{
 		$access = $depth === 0 ? null : (Privilege::classAccess($class) ?? $inherited);
 
 		foreach ($class->getMethods() as $method) {
 			$name = $method->getName();
 			if (str_starts_with($name, 'handle') && strlen($name) > 6 && $method->isPublic()) {
-				$this->add($privileges, Privilege::methodAccess($method) ?? $access, lcfirst(substr($name, 6)));
+				$privilege = $this->getPrivilege(Privilege::methodAccess($method) ?? $access, lcfirst(substr($name, 6)));
+				if ($privilege !== null) {
+					$this->addSource($sources, $privilege, self::Signal, $class->getShortName() . '::' . $name);
+				}
 
 			} elseif (str_starts_with($name, 'createComponent') && strlen($name) > 15 && $depth < self::MaxDepth) {
 				$child = $this->getReturnClass($method);
 				$childAccess = Privilege::methodAccess($method) ?? $access;
 				if ($child?->isSubclassOf(Form::class) || $child?->getName() === Form::class) {
-					$this->add($privileges, Privilege::classAccess($child) ?? $childAccess, lcfirst(substr($name, 15)));
+					$formName = lcfirst(substr($name, 15));
+					$privilege = $this->getPrivilege(Privilege::classAccess($child) ?? $childAccess, $formName);
+					if ($privilege !== null) {
+						$this->addSource($sources, $privilege, self::Form, $formName);
+					}
 				} elseif ($child?->isSubclassOf(Component::class)) {
-					$this->addComponent($privileges, $child, $childAccess, $depth + 1);
+					$this->addComponent($sources, $child, $childAccess, $depth + 1);
 				}
 			}
 		}
 	}
 
 
-	/** @param list<string> $privileges */
-	private function add(array &$privileges, ?Access $access, string $default): void
+	/** The privilege a signal needs: by the Access attribute or its own name; null when the page is enough. */
+	private function getPrivilege(?Access $access, string $default): ?string
 	{
 		if ($access === null) {
-			$privileges[] = $default;
-		} elseif ($access->parameter === null && is_string($access->privilege) && !in_array($access->privilege, $privileges, true)) {
-			$privileges[] = $access->privilege;
+			return $default;
+		}
+
+		return $access->parameter === null && is_string($access->privilege) ? $access->privilege : null;
+	}
+
+
+	/** @param array<string, array<string, list<string>>> $sources */
+	private function addSource(array &$sources, string $privilege, string $kind, string $name): void
+	{
+		if (!in_array($name, $sources[$privilege][$kind] ?? [], true)) {
+			$sources[$privilege][$kind][] = $name;
 		}
 	}
 
