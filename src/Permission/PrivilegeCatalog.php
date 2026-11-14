@@ -22,8 +22,7 @@ use function is_string, strlen;
 final readonly class PrivilegeCatalog
 {
 	/** Kinds of the places that need a privilege. */
-	public const string
-		Page = 'page',
+	public const string Page = 'page',
 		Signal = 'signal',
 		Form = 'form';
 
