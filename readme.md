@@ -216,7 +216,7 @@ need only the page are left out. An administration of permissions offers them wi
 
 ```php
 $catalog = new Drago\Permission\PrivilegeCatalog($presenterFactory);
-$catalog->getPrivileges('Backend:Blog'); // ['default', 'categories', 'delete', 'edit', …]
+$catalog->getPrivileges('Backend:Blog'); // ['default', 'approveComment', 'deleteComment', 'edit', …]
 ```
 
 `getSources()` also tells which places of the code need each privilege, by kind (`PrivilegeCatalog::Page`,
